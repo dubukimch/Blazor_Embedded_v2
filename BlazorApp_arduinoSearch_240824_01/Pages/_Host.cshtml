@@ -5,4 +5,22 @@
     Layout = "_Layout";
 }
 
-<component type="typeof(App)" render-mode="ServerPrerendered" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BlazorApp</title>
+    <base href="~/" />
+    <link rel="stylesheet" href="css/site.css" />
+    <link href="BlazorApp.styles.css" rel="stylesheet" />
+
+    <!-- Chart.js CDN 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/sensorChart.js"></script> <!-- sensorChart.js 파일 참조 -->
+</head>
+<body>
+    <component type="typeof(App)" render-mode="ServerPrerendered" />
+    <!--<script src="_framework/blazor.server.js"></script>-->
+</body>
+</html>

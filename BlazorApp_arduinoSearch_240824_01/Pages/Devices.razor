@@ -103,6 +103,7 @@ else
 
     private async Task ConnectToDevice(Device device)
     {
+        Console.WriteLine("버튼 실행");
         if (string.IsNullOrEmpty(device.MqttServer) || string.IsNullOrEmpty(device.MqttPort) || string.IsNullOrEmpty(device.MqttTopic))
         {
             Console.WriteLine("MQTT 정보를 모두 입력하세요.");
@@ -117,16 +118,22 @@ else
         // Check Arduino Description and navigate if it matches "LED Control"
         if (mqttService.IsConnected)
         {
+            Console.WriteLine("연결 실행중");
             if (device.Name == "Arduino LED Controller") // Added condition to check if MQTT connection is established
             {
                 //NavigationManager.NavigateTo($"/ledControl?mqttAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopic={device.MqttTopic}");
                 var url = $"/ledControl?mqttAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopic={device.MqttTopic}";
                 await JSRuntime.InvokeVoidAsync("openInNewTab", url);
             }
-            else if (device.Name == "Arduino LED Controller")
+            else if (device.Name == "DHZ Sensor")
             {
-                
-
+                var url = $"/DHZChart?mqttAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopic={device.MqttTopic}";
+                await JSRuntime.InvokeVoidAsync("openInNewTab", url);
+            }
+            else if (device.Name == "Soil Moisture Sensor")
+            {
+                var url = $"/soilMoistureChart?mqttAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopic={device.MqttTopic}";
+                await JSRuntime.InvokeVoidAsync("openInNewTab", url);
             }
         }
     }

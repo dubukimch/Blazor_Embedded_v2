@@ -2,6 +2,11 @@ using BlazorApp_arduinoSearch_240824_01.Data;
 using BlazorApp_arduinoSearch_240824_01.Pages;
 using BlazorApp_arduinoSearch_240824_01.Services;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
+using System.Text.Json;
+
 
 var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
@@ -31,4 +36,4 @@ app.UseRouting();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
-app.Run();
+app.Run("http://0.0.0.0:5000");
