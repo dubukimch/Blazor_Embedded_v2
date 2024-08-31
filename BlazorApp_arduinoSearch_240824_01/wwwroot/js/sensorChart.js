@@ -34,6 +34,8 @@
 
 window.updateChart = function (temperatureData, humidityData, soilMoistureData) {
     if (window.sensorChart) {
+        var labels = Array.from({ length: temperatureData.length }, (_, i) => i + 1); // 라벨을 데이터 길이에 맞게 설정
+        window.sensorChart.data.labels = labels;
         window.sensorChart.data.datasets[0].data = temperatureData;
         window.sensorChart.data.datasets[1].data = humidityData;
         window.sensorChart.data.datasets[2].data = soilMoistureData;

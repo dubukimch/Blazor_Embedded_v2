@@ -4,7 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @implements IDisposable
-
+@using System.Text.Json.Serialization
 <h3>Real-Time Sensor Data</h3>
 <canvas id="sensorChart" width="400" height="200"></canvas>
 
@@ -16,7 +16,7 @@
     private List<float> humidityData = new List<float>();
     private List<int> soilMoistureData = new List<int>();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync ()
     {
         // Query String에서 MQTT 정보 가져오기
         var uri = new Uri(NavigationManager.Uri);
@@ -33,7 +33,7 @@
         await MqttService.ConnectAsync(mqttAddress, mqttPort);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAfterRenderAsync (bool firstRender)
     {
         if (firstRender)
         {
@@ -42,12 +42,16 @@
         }
     }
 
-    private async void HandleMqttMessage(string topic, string message)
+    private async void HandleMqttMessage (string topic, string message)
     {
+        Console.WriteLine($"Received MQTT message on topic {topic}: {message}");
+
         var sensorData = JsonSerializer.Deserialize<SensorData>(message);
 
         if (sensorData != null)
         {
+            Console.WriteLine($"Temperature: {sensorData.Temperature}, Humidity: {sensorData.Humidity}, Soil Moisture: {sensorData.SoilMoisture}");
+
             temperatureData.Add(sensorData.Temperature);
             humidityData.Add(sensorData.Humidity);
             soilMoistureData.Add(sensorData.SoilMoisture);
@@ -64,13 +68,21 @@
         }
     }
 
-    private async Task UpdateChart()
+    private async Task UpdateChart ()
     {
+        Console.WriteLine($"temperatureData :{temperatureData}\n humidityData: {humidityData}\n soilMoistureData:{soilMoistureData}\n");
+        Console.WriteLine($"JavaScript로 차트를 업데이트");
+
+
         // JavaScript로 차트를 업데이트
         await JSRuntime.InvokeVoidAsync("updateChart", temperatureData.ToArray(), humidityData.ToArray(), soilMoistureData.ToArray());
+        Console.WriteLine("JavaScript로 차트를 업데이트");
+        Console.WriteLine($"temperatureData: {string.Join(", ", temperatureData.ToArray())}");
+        Console.WriteLine($"humidityData: {string.Join(", ", humidityData.ToArray())}");
+        Console.WriteLine($"soilMoistureData: {string.Join(", ", soilMoistureData.ToArray())}");
     }
 
-    public void Dispose()
+    public void Dispose ()
     {
         // MQTT 메시지 수신 핸들러 제거
         MqttService.OnMessageReceived -= HandleMqttMessage;
@@ -81,8 +93,13 @@
 
     public class SensorData
     {
+        [JsonPropertyName("temperature")]
         public float Temperature { get; set; }
+
+        [JsonPropertyName("humidity")]
         public float Humidity { get; set; }
+
+        [JsonPropertyName("soil_moisture")]
         public int SoilMoisture { get; set; }
     }
 }
