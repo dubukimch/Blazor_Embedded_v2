@@ -24,3 +24,24 @@
     <!--<script src="_framework/blazor.server.js"></script>-->
 </body>
 </html>
+<script>
+    function BlazorStartUnity(loaderUrl) {
+        var script = document.createElement('script');
+        script.src = loaderUrl;
+        script.onload = function () {
+            var buildUrl = 'Build';
+            var config = {
+                dataUrl: 'Build/wwwroot.data',
+                frameworkUrl: 'Build/wwwroot.framework.js',
+                codeUrl: 'Build/wwwroot.wasm',
+                streamingAssetsUrl: 'StreamingAssets',
+                companyName: 'DefaultCompany',
+                productName: 'farmTest240531',
+                productVersion: '0.1',
+                showBanner: unityShowBanner,
+            };
+            createUnityInstance(document.querySelector('#unityContainer'), config);
+        };
+        document.body.appendChild(script);
+    }
+</script>

@@ -1,0 +1,60 @@
+﻿@page "/3dDashBoard"
+@inject IJSRuntime JSRuntime
+
+<h3>_3dDashBoard</h3>
+
+<div id="unityContainer" style="width: 960px; height: 600px;"></div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                var loaderUrl = 'Build/wwwroot.loader.js';
+                var script = document.createElement('script');
+                script.src = loaderUrl;
+                script.onload = function() {
+                    var buildUrl = 'Build';
+                    var config = {
+                        dataUrl: 'Build/wwwroot.data',
+                        frameworkUrl: 'Build/wwwroot.framework.js',
+                        codeUrl: 'Build/wwwroot.wasm',
+                        streamingAssetsUrl: 'StreamingAssets',
+                        companyName: 'DefaultCompany',
+                        productName: 'farmTest240531',
+                        productVersion: '0.1',
+                        showBanner: unityShowBanner
+                    };
+
+                    var canvas = document.querySelector('#unityContainer');
+                    createUnityInstance(canvas, config).then((unityInstance) => {
+                        console.log('Unity instance created successfully');
+                    }).catch((message) => {
+                        console.error('Failed to create Unity instance:', message);
+                    });
+                };
+                document.body.appendChild(script);
+
+                function unityShowBanner(msg, type) {
+                    var warningBanner = document.querySelector('#unity-warning');
+                    function updateBannerVisibility() {
+                        warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+                    }
+                    var div = document.createElement('div');
+                    div.innerHTML = msg;
+                    warningBanner.appendChild(div);
+                    if (type == 'error') div.style = 'background: red; padding: 10px;';
+                    else {
+                        if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+                        setTimeout(function() {
+                            warningBanner.removeChild(div);
+                            updateBannerVisibility();
+                        }, 5000);
+                    }
+                    updateBannerVisibility();
+                }
+            ");
+        }
+    }
+}
