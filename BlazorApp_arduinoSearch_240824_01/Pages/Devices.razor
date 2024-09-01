@@ -111,7 +111,7 @@ else
         }
         Console.WriteLine($"Address:{device.Address}\nMqttPort:{device.MqttPort}\nName:{device.Name}\nMqttServer:{device.MqttServer}\nMqttServer:{device.Description}\n");
         var mqttService = Services.GetRequiredService<Services.MqttService>();
-        await mqttService.ConnectAsync(device.MqttServer, int.Parse(device.MqttPort));
+        await mqttService.ConnectAsync(device.MqttServer, int.Parse(device.MqttPort),device.MqttTopic);
 
         await ConfigureMqttOnDevice(device);
 

@@ -30,7 +30,7 @@
         MqttService.OnMessageReceived += HandleMqttMessage;
 
         // MQTT 브로커에 연결
-        await MqttService.ConnectAsync(mqttAddress, mqttPort);
+        await MqttService.ConnectAsync(mqttAddress, mqttPort,mqttTopic);
     }
 
     protected override async Task OnAfterRenderAsync (bool firstRender)

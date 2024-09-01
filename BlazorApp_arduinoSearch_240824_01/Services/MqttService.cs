@@ -13,6 +13,11 @@ namespace BlazorApp_arduinoSearch_240824_01.Services
         private IMqttClient _client;
         public event Action<string, string> OnMessageReceived;
         private bool _disposed = false;
+        private int port;
+        private string iPServer;
+        private string topic;
+
+
         public MqttService ()
         {
             var factory = new MqttFactory();
@@ -20,12 +25,14 @@ namespace BlazorApp_arduinoSearch_240824_01.Services
 
             _client.ConnectedAsync += async e =>
             {
+
                 Console.WriteLine("Connected to MQTT Broker.");
                 // Subscribing to relevant topics, for example, for status updates
+
                 await _client.SubscribeAsync(new MqttClientSubscribeOptionsBuilder()
-                    .WithTopicFilter("home/led/status")
+                    .WithTopicFilter(this.topic)
                     .Build());
-                Console.WriteLine("Subscribed to topic: home/led/status");
+                Console.WriteLine($"Subscribed to topic: {this.topic}");
             };
 
             _client.DisconnectedAsync += e =>
@@ -42,8 +49,11 @@ namespace BlazorApp_arduinoSearch_240824_01.Services
             };
         }
         public bool IsConnected => _client.IsConnected;
-        public async Task ConnectAsync (string server, int port)
+        public async Task ConnectAsync (string server, int port, string topic)
         {
+            this.iPServer = server;
+            this.port = port;
+            this.topic = topic;
             //var factory = new MqttFactory();
             //_client = factory.CreateMqttClient();
             if (_client.IsConnected)

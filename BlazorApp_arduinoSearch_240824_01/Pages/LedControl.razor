@@ -29,7 +29,7 @@
         mqttPort = int.Parse(query["mqttPort"]);
         mqttTopic = query["mqttTopic"];
 
-        await MqttService.ConnectAsync(mqttAddress, mqttPort); // await 연산자 추가
+        await MqttService.ConnectAsync(mqttAddress, mqttPort,mqttTopic); // await 연산자 추가
     }
 
     private async Task TurnOn()
