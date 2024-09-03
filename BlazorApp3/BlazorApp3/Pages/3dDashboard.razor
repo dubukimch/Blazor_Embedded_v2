@@ -1,0 +1,73 @@
+﻿@page "/3dDashboard"
+@inject IJSRuntime JSRuntime
+
+<h3>3D Dashboard</h3>
+
+<div id="unityContainer" style="width: 960px; height: 600px;"></div>
+
+@code {
+    protected override async Task OnAfterRenderAsync (bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                var container = document.querySelector('#unityContainer');
+                var canvas = document.createElement('canvas');
+                canvas.id = 'unityCanvas';
+                canvas.width = 1280;
+                canvas.height = 960;
+                container.appendChild(canvas);
+
+                var loadingBar = document.createElement('div');
+                loadingBar.id = 'unity-loading-bar';
+                container.appendChild(loadingBar);
+
+                var progressBarFull = document.createElement('div');
+                progressBarFull.id = 'unity-progress-bar-full';
+                loadingBar.appendChild(progressBarFull);
+
+                var fullscreenButton = document.createElement('div');
+                fullscreenButton.id = 'unity-fullscreen-button';
+                container.appendChild(fullscreenButton);
+
+                var warningBanner = document.createElement('div');
+                warningBanner.id = 'unity-warning';
+                container.appendChild(warningBanner);
+
+                function unityShowBanner(msg, type) {
+                    warningBanner.innerHTML = msg;
+                    warningBanner.style.display = 'block';
+                    if (type == 'error') warningBanner.style.background = 'red';
+                    else if (type == 'warning') warningBanner.style.background = 'yellow';
+                }
+
+                var buildUrl = 'Build';
+                var loaderUrl = buildUrl + '/wwwroot.loader.js';
+                var config = {
+                    dataUrl: buildUrl + '/wwwroot.data',
+                    frameworkUrl: buildUrl + '/wwwroot.framework.js',
+                    codeUrl: buildUrl + '/wwwroot.wasm',
+                    streamingAssetsUrl: buildUrl + '/StreamingAssets',
+                    companyName: 'DefaultCompany',
+                    productName: 'farmTest240531',
+                    productVersion: '0.1',
+                    showBanner: unityShowBanner,
+                };
+
+                var script = document.createElement('script');
+                script.src = loaderUrl;
+                script.onload = function() {
+                    createUnityInstance(canvas, config).then(function(unityInstance) {
+                        loadingBar.style.display = 'none';
+                        fullscreenButton.onclick = function() {
+                            unityInstance.SetFullscreen(1);
+                        };
+                    }).catch(function(error) {
+                        console.error('Failed to create Unity instance:', error);
+                    });
+                };
+                document.body.appendChild(script);
+            ");
+        }
+    }
+}
