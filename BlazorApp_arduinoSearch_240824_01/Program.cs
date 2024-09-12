@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using System.Text.Json;
+using MatBlazor;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,8 +18,9 @@ builder.Services.AddSingleton<WeatherForecastService>();
 // DeviceDiscoveryService µî·Ï
 builder.Services.AddHttpClient<DeviceDiscoveryService>();
 builder.Services.AddSingleton<MqttService>();
-var app = builder.Build();
+builder.Services.AddMatBlazor();
 
+var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
