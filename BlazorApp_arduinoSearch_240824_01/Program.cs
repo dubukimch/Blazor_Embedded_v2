@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using System.Text.Json;
+using MatBlazor;
 using ElectronNET.API;
 using ElectronNET.API.Entities;
 
@@ -16,11 +17,12 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 
-// DeviceDiscoveryService µÓ∑œ
+// DeviceDiscoveryService ¬µ√Æ¬∑√è
 builder.Services.AddHttpClient<DeviceDiscoveryService>();
 builder.Services.AddSingleton<MqttService>();
-var app = builder.Build();
+builder.Services.AddMatBlazor();
 
+var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

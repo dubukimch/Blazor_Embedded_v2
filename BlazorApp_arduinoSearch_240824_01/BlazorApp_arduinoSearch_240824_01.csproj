@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MatBlazor" Version="2.10.0" />
     <PackageReference Include="ElectronNET.API" Version="23.6.2" />
     <PackageReference Include="MQTTnet" Version="4.3.6.1152" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
