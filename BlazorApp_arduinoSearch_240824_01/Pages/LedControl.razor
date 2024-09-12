@@ -34,16 +34,16 @@
 
     private async Task TurnOn()
     {
-        Console.WriteLine("home/led => ON");
+        Console.WriteLine($"{mqttTopic} => ON");
 
-        await MqttService.PublishMessageAsync("home/led", "ON");
+        await MqttService.PublishMessageAsync(mqttTopic, "ON");
     }
 
     private async Task TurnOff()
     {
-        Console.WriteLine("home/led => OFF");
+        Console.WriteLine($"{mqttTopic} => OFF");
 
-        await MqttService.PublishMessageAsync("home/led", "OFF");
+        await MqttService.PublishMessageAsync(mqttTopic, "OFF");
     }
 
     public void Dispose()
