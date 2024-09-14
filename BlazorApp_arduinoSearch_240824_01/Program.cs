@@ -1,6 +1,6 @@
 using BlazorApp_arduinoSearch_240824_01.Data;
 using BlazorApp_arduinoSearch_240824_01.Pages;
-using BlazorApp_arduinoSearch_240824_01.Services;
+using BlazorApp_arduinoSearch_240824_01;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;

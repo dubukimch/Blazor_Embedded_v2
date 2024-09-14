@@ -1,6 +1,6 @@
 ﻿@page "/soilMoistureChart"
 @using System.Text.Json
-@inject Services.MqttService MqttService
+@inject MqttService MqttService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @implements IDisposable
@@ -16,12 +16,12 @@
 @code {
     private string mqttAddress;
     private int mqttPort;
-    private string mqttTopic;
+    private Dictionary<string, List<string>> mqttTopics; // 여러 센서의 MQTT 토픽
     private List<float> temperatureData = new List<float>();
     private List<float> humidityData = new List<float>();
     private List<int> soilMoistureData = new List<int>();
 
-    protected override async Task OnInitializedAsync ()
+    protected override async Task OnInitializedAsync()
     {
         // Query String에서 MQTT 정보 가져오기
         var uri = new Uri(NavigationManager.Uri);
@@ -29,16 +29,15 @@
 
         mqttAddress = query["mqttAddress"];
         mqttPort = int.Parse(query["mqttPort"]);
-        mqttTopic = query["mqttTopic"];
+
+        // MQTT 브로커에 연결 및 토픽 정보 가져오기
+        //mqttTopics = await MqttService.ConnectAndGetTopicsAsync(mqttAddress, mqttPort);
 
         // MQTT 메시지 수신 핸들러 등록
         MqttService.OnMessageReceived += HandleMqttMessage;
-
-        // MQTT 브로커에 연결
-        await MqttService.ConnectAsync(mqttAddress, mqttPort, mqttTopic);
     }
 
-    protected override async Task OnAfterRenderAsync (bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
@@ -47,39 +46,67 @@
         }
     }
 
-    private async void HandleMqttMessage (string topic, string message)
+    private async void HandleMqttMessage(string topic, string message)
     {
         Console.WriteLine($"Received MQTT message on topic {topic}: {message}");
 
-        var sensorData = JsonSerializer.Deserialize<SensorData>(message);
-
-        if (sensorData != null)
+        if (mqttTopics["temperature"].Contains(topic))
         {
-            Console.WriteLine($"Temperature: {sensorData.Temperature}, Humidity: {sensorData.Humidity}, Soil Moisture: {sensorData.SoilMoisture}");
+            UpdateTemperatureData(message);
+        }
+        else if (mqttTopics["humidity"].Contains(topic))
+        {
+            UpdateHumidityData(message);
+        }
+        else if (mqttTopics["soil_moisture"].Contains(topic))
+        {
+            UpdateSoilMoistureData(message);
+        }
 
-            temperatureData.Add(sensorData.Temperature);
-            humidityData.Add(sensorData.Humidity);
-            soilMoistureData.Add(sensorData.SoilMoisture);
+        // 차트를 업데이트
+        await UpdateCharts();
+    }
 
-            if (temperatureData.Count > 10)
-            {
-                temperatureData.RemoveAt(0);
-                humidityData.RemoveAt(0);
-                soilMoistureData.RemoveAt(0);
-            }
+    private void UpdateTemperatureData(string message)
+    {
+        float temperature = float.Parse(message);
+        temperatureData.Add(temperature);
 
-            // 차트를 업데이트
-            await UpdateCharts();
+        if (temperatureData.Count > 10)
+        {
+            temperatureData.RemoveAt(0);
         }
     }
 
-    private async Task UpdateCharts ()
+    private void UpdateHumidityData(string message)
+    {
+        float humidity = float.Parse(message);
+        humidityData.Add(humidity);
+
+        if (humidityData.Count > 10)
+        {
+            humidityData.RemoveAt(0);
+        }
+    }
+
+    private void UpdateSoilMoistureData(string message)
+    {
+        int soilMoisture = int.Parse(message);
+        soilMoistureData.Add(soilMoisture);
+
+        if (soilMoistureData.Count > 10)
+        {
+            soilMoistureData.RemoveAt(0);
+        }
+    }
+
+    private async Task UpdateCharts()
     {
         // JavaScript로 차트를 업데이트
         await JSRuntime.InvokeVoidAsync("updateCharts", temperatureData.ToArray(), humidityData.ToArray(), soilMoistureData.ToArray());
     }
 
-    public void Dispose ()
+    public void Dispose()
     {
         // MQTT 메시지 수신 핸들러 제거
         MqttService.OnMessageReceived -= HandleMqttMessage;

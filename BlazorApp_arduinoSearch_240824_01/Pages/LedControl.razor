@@ -1,56 +1,180 @@
 ﻿@page "/LedControl"
-@inject Services.MqttService MqttService
+@inject MqttService MqttService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
+<h3>LED Control and Light Sensor Data</h3>
 
-<h3>LedControl</h3> <!-- 컴포넌트 이름을 대문자로 시작 -->
-
+<!-- LED 제어 버튼 -->
 <button @onclick="TurnOn">Turn On</button>
 <button @onclick="TurnOff">Turn Off</button>
 
+<!-- 차트를 표시할 캔버스 -->
+<canvas id="lightSensorChart" width="400" height="200"></canvas>
+
 @code {
     private string mqttAddress;
+    private string ipAddress;
     private int mqttPort;
-    private string mqttTopic;
+    private Dictionary<string, List<string>> mqttTopics;
+    private int[] morningData = new int[4];    // 동, 서, 남, 북 조도센서 아침 값
+    private int[] afternoonData = new int[4];  // 동, 서, 남, 북 조도센서 점심 값
+    private int[] eveningData = new int[4];    // 동, 서, 남, 북 조도센서 저녁 값
+    private bool isFirstRender = true;
 
     protected override async Task OnInitializedAsync()
     {
-        // Subscribe to the MQTT messages from Arduino
-        MqttService.OnMessageReceived += (topic, message) =>
-        {
-            Console.WriteLine($"Received message on topic {topic}: {message}");
-            // Optionally update the UI based on received messages
-        };
         // Query String에서 MQTT 정보 가져오기
         var uri = new Uri(NavigationManager.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
 
         mqttAddress = query["mqttAddress"];
+        ipAddress = query["ipAddress"];
         mqttPort = int.Parse(query["mqttPort"]);
-        mqttTopic = query["mqttTopic"];
+        var mqttTopicsJson  = query["mqttTopics"];
+        mqttTopics = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(mqttTopicsJson);
+        // MQTT 연결 및 토픽 정보 가져오기
+        mqttTopics = await MqttService.ConnectAndGetTopicsAsync(mqttAddress, ipAddress, mqttPort);
 
-        await MqttService.ConnectAsync(mqttAddress, mqttPort,mqttTopic); // await 연산자 추가
-    }
-
-    private async Task TurnOn()
-    {
-        Console.WriteLine($"{mqttTopic} => ON");
-
-        await MqttService.PublishMessageAsync(mqttTopic, "ON");
-    }
-
-    private async Task TurnOff()
-    {
-        Console.WriteLine($"{mqttTopic} => OFF");
-
-        await MqttService.PublishMessageAsync(mqttTopic, "OFF");
-    }
-
-    public void Dispose()
-    {
-        MqttService.OnMessageReceived -= (topic, message) =>
+        // MQTT 메시지 수신 핸들러 등록
+        MqttService.OnMessageReceived += (topic, message) =>
         {
             Console.WriteLine($"Received message on topic {topic}: {message}");
+
+            // LED 제어 메시지 처리 (sensor/led 토픽 비교)
+            if (mqttTopics["led"].FirstOrDefault() == topic)
+            {
+                Console.WriteLine("LED 토픽 메시지 수신: " + message);
+                HandleLedControlMessage(message);
+            }
+
+            // 조도 센서 값 처리 (sensor/east, sensor/west 등과 비교)
+            foreach (var key in new[] { "east", "west", "south", "north" })
+            {
+                if (mqttTopics.ContainsKey(key) && mqttTopics[key].Contains(topic))
+                {
+                    Console.WriteLine($"{key.ToUpper()} 센서 토픽 메시지 수신: {message}");
+                    UpdateLightSensorData(topic, message);
+                    break;  // 하나의 키와 일치하면 나머지는 확인할 필요 없음
+                }
+            }
+
+            InvokeAsync(StateHasChanged); // UI 업데이트
         };
     }
+
+    // 렌더링 완료 후 차트 렌더링
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RenderChart(); // 차트를 처음 렌더링할 때 호출
+            isFirstRender = false;
+        }
+    }
+
+    // LED 제어 메시지 처리 함수
+    private void HandleLedControlMessage(string message)
+    {
+        if (message == "ON")
+        {
+            Console.WriteLine("LED is turned ON.");
+        }
+        else if (message == "OFF")
+        {
+            Console.WriteLine("LED is turned OFF.");
+        }
+    }
+
+    // 조도 센서 데이터 업데이트 처리 함수
+    private void UpdateLightSensorData(string topic, string message)
+    {
+        int value = int.Parse(message);
+
+        // 현재 시간을 기준으로 시간대 구분
+        var currentTime = DateTime.Now;
+        if (currentTime.Hour >= 6 && currentTime.Hour < 12) // 아침
+        {
+            UpdateMorningData(topic, value);
+        }
+        else if (currentTime.Hour >= 12 && currentTime.Hour < 18) // 점심
+        {
+            UpdateAfternoonData(topic, value);
+        }
+        else if (currentTime.Hour >= 18 || currentTime.Hour < 6) // 저녁 및 야간
+        {
+            UpdateEveningData(topic, value);
+        }
+
+        // 차트 업데이트
+        InvokeAsync(async () => await UpdateChart());
+    }
+
+    private void UpdateMorningData(string topic, int value)
+    {
+        if (topic == "sensor/east") morningData[0] = value;
+        else if (topic == "sensor/west") morningData[1] = value;
+        else if (topic == "sensor/south") morningData[2] = value;
+        else if (topic == "sensor/north") morningData[3] = value;
+    }
+
+    private void UpdateAfternoonData(string topic, int value)
+    {
+        if (topic == "sensor/east") afternoonData[0] = value;
+        else if (topic == "sensor/west") afternoonData[1] = value;
+        else if (topic == "sensor/south") afternoonData[2] = value;
+        else if (topic == "sensor/north") afternoonData[3] = value;
+    }
+
+    private void UpdateEveningData(string topic, int value)
+    {
+        if (topic == "sensor/east") eveningData[0] = value;
+        else if (topic == "sensor/west") eveningData[1] = value;
+        else if (topic == "sensor/south") eveningData[2] = value;
+        else if (topic == "sensor/north") eveningData[3] = value;
+    }
+
+    // 차트 초기 렌더링 함수
+    private async Task RenderChart()
+    {
+        var lightSensorData = new
+        {
+            morning = morningData,
+            afternoon = afternoonData,
+            evening = eveningData
+        };
+
+        // 차트 초기 렌더링
+        await JSRuntime.InvokeVoidAsync("renderLightSensorChart", "lightSensorChart", lightSensorData);
+    }
+
+    // 차트 업데이트 함수
+    private async Task UpdateChart()
+    {
+        var lightSensorData = new
+        {
+            morning = morningData,
+            afternoon = afternoonData,
+            evening = eveningData
+        };
+
+        // 차트 업데이트
+        await JSRuntime.InvokeVoidAsync("updateLightSensorChart", "lightSensorChart", lightSensorData);
+    }
+
+    // LED 켜기 함수
+    private async Task TurnOn()
+    {
+        Console.WriteLine($"{mqttTopics["led"].FirstOrDefault()} => ON");
+        await MqttService.PublishMessageAsync(mqttTopics["led"].FirstOrDefault(), "ON");
+    }
+
+    // LED 끄기 함수
+    private async Task TurnOff()
+    {
+        Console.WriteLine($"{mqttTopics["led"].FirstOrDefault()} => OFF");
+        await MqttService.PublishMessageAsync(mqttTopics["led"].FirstOrDefault(), "OFF");
+    }
+
+
 }
