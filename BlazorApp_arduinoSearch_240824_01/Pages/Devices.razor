@@ -1,11 +1,11 @@
 ﻿@page "/devices"
+@using BlazorApp_arduinoSearch_240824_01.DataModel
 @inject NavigationManager NavigationManager
 @inject DeviceDiscoveryService DeviceDiscoveryService
 @inject IServiceProvider Services
-@inject Services.MqttService MqttService
+@inject MqttService MqttService
+@using System.Net
 @inject IJSRuntime JSRuntime
-@using System.Text.Json
-@using System.Text
 
 <h3>연결 가능한 장비 목록</h3>
 
@@ -31,32 +31,38 @@
                     <td>@device.Address</td>
                     <td>@device.Description</td>
                     <td>
-                        @if (string.IsNullOrEmpty(device.Description) || !device.Description.StartsWith("Error"))
-                        {
-                            <input type="text" placeholder="MQTT 서버" @bind="@device.MqttServer" />
-                        }
+                        <input type="text" placeholder="MQTT 서버" @bind="@device.MqttServer" />
                     </td>
                     <td>
-                        @if (string.IsNullOrEmpty(device.Description) || !device.Description.StartsWith("Error"))
-                        {
-                            <input type="text" placeholder="MQTT 포트" @bind="@device.MqttPort" />
-                        }
+                        <input type="text" placeholder="MQTT 포트" @bind="@device.MqttPort" />
                     </td>
                     <td>
-                        @if (string.IsNullOrEmpty(device.Description) || !device.Description.StartsWith("Error"))
-                        {
-                            <input type="text" placeholder="MQTT 토픽" @bind="@device.MqttTopic" />
-                        }
+                        <div>
+                            @if (device.MqttTopics != null && device.MqttTopics.Any())
+                            {
+                                <ul>
+                                    @foreach (var topicGroup in device.MqttTopics)
+                                    {
+                                        <li>
+                                            @topicGroup.Key
+                                            <ul>
+                                                @foreach (var topic in topicGroup.Value)
+                                                {
+                                                    <li>@topic</li>
+                                                }
+                                            </ul>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p>아두이노로부터 토픽을 불러오는 중...</p>
+                            }
+                        </div>
                     </td>
                     <td>
-                        @if (string.IsNullOrEmpty(device.Description) || !device.Description.StartsWith("Error"))
-                        {
-                            <button class="btn btn-primary" @onclick="() => ConnectToDevice(device)">연결</button>
-                        }
-                        else
-                        {
-                            <button class="btn btn-danger" disabled>오류 발생</button>
-                        }
+                        <button class="btn btn-primary" @onclick="() => ConnectToDevice(device)" disabled="@(!device.MqttTopics?.Any() ?? true)">연결</button>
                     </td>
                 </tr>
             }
@@ -73,91 +79,65 @@ else
 }
 
 @code {
-    private bool _disposed = false;
-    public void Dispose ()
-    {
-        _disposed = true;
-        // 리소스 정리 코드
-    }
-
     private List<Device> devices;
     private bool isLoading = true;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync ()
     {
-        try
-        {
-            if (!_disposed)
-            {
-                InvokeAsync(StateHasChanged); // 해제된 후 상태 변경을 시도하지 않음
-            }
-        }
-        catch (Exception ex)
-        {
-            // 예외 처리
-        }
-
         devices = await DeviceDiscoveryService.DiscoverDevicesAsync();
         isLoading = false;
+
+        // 각 장비의 기본 MQTT 정보를 설정
+        foreach (var device in devices)
+        {
+            device.MqttServer = GetLocalIPAddress();  // 현재 Blazor가 실행 중인 PC의 IP 주소
+            device.MqttPort = "1883";                 // 기본 MQTT 포트
+        }
     }
 
-    private async Task ConnectToDevice(Device device)
+    private async Task ConnectToDevice (Device device)
     {
-        Console.WriteLine("버튼 실행");
-        if (string.IsNullOrEmpty(device.MqttServer) || string.IsNullOrEmpty(device.MqttPort) || string.IsNullOrEmpty(device.MqttTopic))
+        if (string.IsNullOrEmpty(device.MqttServer) || string.IsNullOrEmpty(device.MqttPort))
         {
-            Console.WriteLine("MQTT 정보를 모두 입력하세요.");
+            Console.WriteLine("MQTT 서버와 포트 정보를 입력하세요.");
             return;
         }
-        Console.WriteLine($"Address:{device.Address}\nMqttPort:{device.MqttPort}\nName:{device.Name}\nMqttServer:{device.MqttServer}\nMqttServer:{device.Description}\n");
-        var mqttService = Services.GetRequiredService<Services.MqttService>();
-        await mqttService.ConnectAsync(device.MqttServer, int.Parse(device.MqttPort),device.MqttTopic);
 
-        await ConfigureMqttOnDevice(device);
+        Console.WriteLine($"Address: {device.Address}\nMqttPort: {device.MqttPort}\nName: {device.Name}\nMqttServer: {device.MqttServer}");
 
-        // Check Arduino Description and navigate if it matches "LED Control"
-        if (mqttService.IsConnected)
+        // POST 요청을 통해 아두이노로 MQTT 설정 정보 전송
+        await MqttService.SendPostRequestToArduino(device.Address, device.MqttServer, int.Parse(device.MqttPort), device.MqttTopics);
+
+        // MQTT 연결 시도
+        var mqttTopics = await MqttService.ConnectAndGetTopicsAsync(device.MqttServer, device.Address, int.Parse(device.MqttPort));
+
+        if (MqttService.IsConnected)
         {
-            Console.WriteLine("연결 실행중");
-            if (device.Name == "Arduino LED Controller") // Added condition to check if MQTT connection is established
+            if (mqttTopics != null && mqttTopics.Any() && mqttTopics.First().Value != null && mqttTopics.First().Value.Any())
             {
-                //NavigationManager.NavigateTo($"/ledControl?mqttAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopic={device.MqttTopic}");
-                var url = $"/ledControl?mqttAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopic={device.MqttTopic}";
+                // 연결 후 페이지 이동
+                var mqttTopicsJson = System.Text.Json.JsonSerializer.Serialize(mqttTopics/* device.MqttTopics */);
+                //var encodedMqttTopicsJson = Uri.EscapeDataString(mqttTopicsJson); // JSON 문자열을 URL 인코딩
+                var url = $"/LedControl?mqttAddress={device.MqttServer}&ipAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopics={mqttTopicsJson}";
                 await JSRuntime.InvokeVoidAsync("openInNewTab", url);
             }
-            else if (device.Name == "DHZ Sensor")
+            else
             {
-                var url = $"/DHZChart?mqttAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopic={device.MqttTopic}";
-                await JSRuntime.InvokeVoidAsync("openInNewTab", url);
+                Console.WriteLine("MQTT 토픽에 값이 없습니다.");
             }
-            else if (device.Name == "Soil Moisture Sensor")
-            {
-                var url = $"/soilMoistureChart?mqttAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopic={device.MqttTopic}";
-                await JSRuntime.InvokeVoidAsync("openInNewTab", url);
-            }
-        }
-    }
-
-    private async Task ConfigureMqttOnDevice(Device device)
-    {
-        using var httpClient = new HttpClient();
-        var jsonData = new
-        {
-            mqtt_server = device.MqttServer,
-            mqtt_port = device.MqttPort,
-            mqtt_topic = device.MqttTopic
-        };
-        var jsonString = JsonSerializer.Serialize(jsonData);
-        var Jcontent = new StringContent(jsonString, Encoding.UTF8, "application/json");
-
-        var response = await httpClient.PostAsync($"http://{device.Address}/configure_mqtt", Jcontent);
-        if (response.IsSuccessStatusCode)
-        {
-            Console.WriteLine("MQTT 설정이 성공적으로 전송되었습니다.");
         }
         else
         {
-            Console.WriteLine("MQTT 설정 전송 실패.");
+            Console.WriteLine("MQTT 연결이 되지 않았습니다.");
         }
+    }
+
+    private string GetLocalIPAddress ()
+    {
+        var host = Dns.GetHostName();
+        var ip = Dns.GetHostAddresses(host)
+        .FirstOrDefault(i => i.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+
+        return ip?.ToString() ?? "localhost";
     }
 }
