@@ -1,0 +1,30 @@
+﻿@page "/parent"
+@using BlazorApp_arduinoSearch_240824_01.Pages
+@inject IJSRuntime JSRuntime
+
+<h3>Parent Page</h3>
+
+<button @onclick="OpenModal">Open LED Control Popup</button>
+
+<!-- Modal HTML structure -->
+<div class="modal @modalClass">
+    <div class="modal-content">
+        <span @onclick="CloseModal" style="cursor: pointer; color: red;">&times; Close</span>
+        <!-- Here we display the LedControl component inside the modal -->
+        <LedControlComponent />
+    </div>
+</div>
+
+@code {
+    private string modalClass = ""; // Controls modal visibility
+
+    void OpenModal ()
+    {
+        modalClass = "show-modal";  // CSS class to show modal
+    }
+
+    void CloseModal ()
+    {
+        modalClass = "";  // CSS class to hide modal
+    }
+}

@@ -1,31 +1,68 @@
 ﻿@inject MqttService MqttService
 @inject IJSRuntime JSRuntime
 
-<h3>LED Control and Light Sensor Data</h3>
+<h3 class="modal-title">LED Control</h3>
 
-<!-- LED 제어 버튼 -->
-<MatButton OnClick="TurnOn" Class="custom-button turn-on-button m-1">Turn On</MatButton>
-<MatButton OnClick="TurnOff" Class="custom-button turn-off-button m-1">Turn Off</MatButton>
+<!-- 컨트롤 영역: 달력과 버튼 그룹을 배치 -->
+<div class="control-container">
+    <div class="left-container">
+        <p>
+            <!-- MatDatePicker: 달력 아이콘을 검정색으로 표시 -->
+            <MatDatePicker @bind-Value="@Date1"></MatDatePicker>
+        </p>
+        <MatButton Class="now-button" OnClick="@(_ => Date1 = DateTime.Now)">Now</MatButton>
+    </div>
+    <div class="right-container">
+        <MatButton 
+                   OnClick="TurnOn"
+                   Disabled="@isOn"
+                   Class="@($"button-base turn-on-button {OnButtonClass}")">
+            On
+        </MatButton>
+
+        <MatButton 
+                   OnClick="TurnOff"
+                   Disabled="@isOff"
+                   Class="@($"button-base turn-off-button {OffButtonClass}")">
+            Off
+        </MatButton>
+    </div>
+</div>
 
 <!-- 차트를 표시할 캔버스 -->
-<canvas id="lightSensorChart" width="400" height="200"></canvas>
+<div class="chart-container">
+    <canvas id="lightSensorChart"></canvas>
+</div>
 
 @code {
+    public DateTime? Date1 { get; set; } = DateTime.Now.AddDays(-10);
+
     [Parameter] public string MqttAddress { get; set; }
     [Parameter] public string IpAddress { get; set; }
     [Parameter] public int MqttPort { get; set; }
     [Parameter] public Dictionary<string, List<string>> MqttTopics { get; set; }
 
-    private int[] morningData = new int[4];    // 동, 서, 남, 북 조도센서 아침 값
-    private int[] afternoonData = new int[4];  // 동, 서, 남, 북 조도센서 점심 값
-    private int[] eveningData = new int[4];    // 동, 서, 남, 북 조도센서 저녁 값
+    private int[] morningData = new int[4];
+    private int[] afternoonData = new int[4];
+    private int[] eveningData = new int[4];
+
+    private bool isOn = false; // 'On' 버튼 비활성화 여부
+    private bool isOff = false; // 'Off' 버튼 비활성화 여부
+    private string OnButtonClass = ""; // 'On' 버튼의 추가 CSS 클래스
+    private string OffButtonClass = ""; // 'Off' 버튼의 추가 CSS 클래스
+
+    public void OnDialogOpened ()
+    {
+        InvokeAsync(async () =>
+        {
+            await RenderChart();
+        });
+    }
 
     protected override async Task OnInitializedAsync ()
     {
-        // MQTT 연결 및 토픽 정보 가져오기
         MqttTopics = await MqttService.ConnectAndGetTopicsAsync(MqttAddress, IpAddress, MqttPort);
 
-        // MQTT 메시지 수신 핸들러 등록
         MqttService.OnMessageReceived += (topic, message) =>
         {
             if (MqttTopics["led"].FirstOrDefault() == topic)
@@ -42,7 +79,7 @@
                 }
             }
 
-            InvokeAsync(StateHasChanged); // UI 업데이트
+            InvokeAsync(StateHasChanged);
         };
     }
 
@@ -50,39 +87,74 @@
     {
         if (firstRender)
         {
-            await RenderChart(); // 차트를 처음 렌더링할 때 호출
+            await RenderChart();
         }
     }
 
-    // LED 제어 메시지 처리 함수
+    private async Task RenderChart ()
+    {
+        var lightSensorData = new
+        {
+            morning = morningData,
+            afternoon = afternoonData,
+            evening = eveningData
+        };
+
+        await JSRuntime.InvokeVoidAsync("renderLightSensorChart", "lightSensorChart", lightSensorData);
+    }
+
+    private async Task TurnOn ()
+    {
+        await MqttService.PublishMessageAsync(MqttTopics["led"].FirstOrDefault(), "ON");
+        isOn = true;
+        isOff = false;
+        OnButtonClass = "disabled-button";
+        OffButtonClass = ""; // 'Off' 버튼 활성화
+    }
+
+    private async Task TurnOff ()
+    {
+        await MqttService.PublishMessageAsync(MqttTopics["led"].FirstOrDefault(), "OFF");
+        isOff = true;
+        isOn = false;
+        OffButtonClass = "disabled-button";
+        OnButtonClass = ""; // 'On' 버튼 활성화
+    }
+
     private void HandleLedControlMessage (string message)
     {
         if (message == "ON")
         {
+            isOn = true;
+            isOff = false;
+            OnButtonClass = "disabled-button";
+            OffButtonClass = "";
             Console.WriteLine("LED is turned ON.");
         }
         else if (message == "OFF")
         {
+            isOff = true;
+            isOn = false;
+            OffButtonClass = "disabled-button";
+            OnButtonClass = "";
             Console.WriteLine("LED is turned OFF.");
         }
     }
 
-    // 조도 센서 데이터 업데이트 처리 함수
     private void UpdateLightSensorData (string topic, string message)
     {
         int value = int.Parse(message);
 
-        // 현재 시간을 기준으로 시간대 구분
         var currentTime = DateTime.Now;
-        if (currentTime.Hour >= 6 && currentTime.Hour < 12) // 아침
+        if (currentTime.Hour >= 6 && currentTime.Hour < 12)
         {
             UpdateMorningData(topic, value);
         }
-        else if (currentTime.Hour >= 12 && currentTime.Hour < 18) // 점심
+        else if (currentTime.Hour >= 12 && currentTime.Hour < 18)
         {
             UpdateAfternoonData(topic, value);
         }
-        else if (currentTime.Hour >= 18 || currentTime.Hour < 6) // 저녁 및 야간
+        else if (currentTime.Hour >= 18 || currentTime.Hour < 6)
         {
             UpdateEveningData(topic, value);
         }
@@ -114,20 +186,6 @@
         else if (topic == "sensor/north") eveningData[3] = value;
     }
 
-    // 차트 초기 렌더링 함수
-    private async Task RenderChart ()
-    {
-        var lightSensorData = new
-        {
-            morning = morningData,
-            afternoon = afternoonData,
-            evening = eveningData
-        };
-
-        await JSRuntime.InvokeVoidAsync("renderLightSensorChart", "lightSensorChart", lightSensorData);
-    }
-
-    // 차트 업데이트 함수
     private async Task UpdateChart ()
     {
         var lightSensorData = new
@@ -138,15 +196,5 @@
         };
 
         await JSRuntime.InvokeVoidAsync("updateLightSensorChart", "lightSensorChart", lightSensorData);
-    }
-
-    private async Task TurnOn ()
-    {
-        await MqttService.PublishMessageAsync(MqttTopics["led"].FirstOrDefault(), "ON");
-    }
-
-    private async Task TurnOff ()
-    {
-        await MqttService.PublishMessageAsync(MqttTopics["led"].FirstOrDefault(), "OFF");
     }
 }
