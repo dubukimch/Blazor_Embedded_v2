@@ -1,11 +1,14 @@
 ﻿@page "/devices"
 @using BlazorApp_arduinoSearch_240824_01.DataModel
+@using System.Net
 @inject NavigationManager NavigationManager
 @inject DeviceDiscoveryService DeviceDiscoveryService
 @inject IServiceProvider Services
 @inject MqttService MqttService
-@using System.Net
 @inject IJSRuntime JSRuntime
+<head>
+    <link href="css/modalStyles.css" rel="stylesheet" />
+</head>
 
 <h3>연결 가능한 장비 목록</h3>
 
@@ -30,7 +33,6 @@
                     <td>@device.Name</td>
                     <td>@device.Address</td>
                     <td>
-                        <!-- MatTooltip 대신 title 속성을 이용한 HTML 툴팁 적용 -->
                         @if (device.Description.Length > 30)
                         {
                             <span title="@device.Description">@device.Description.Substring(0, 30)...</span>
@@ -64,7 +66,7 @@
                         }
                     </td>
                     <td>
-                        <MatButton Raised="true" Color="Success" @onclick="() => ConnectToDevice(device)" Disabled="@(!device.MqttTopics?.Any() ?? true)">연결</MatButton>
+                        <button class="btn btn-success" @onclick="() => ConnectToDevice(device)" disabled="@(!device.MqttTopics?.Any() ?? true)">연결</button>
                     </td>
                 </tr>
             }
@@ -80,37 +82,54 @@ else
     <p>장비를 찾을 수 없습니다.</p>
 }
 
+<!-- HTML 기반 모달 구조 -->
+<div class="modal @modalClass">
+    <div class="modal-content">
+        <span class="close-btn" @onclick="CloseModal">&times; Close</span>
+        @if (currentDevice != null && mqttTopics != null)
+        {
+            <LedControlComponent MqttAddress="currentDevice.MqttServer"
+                                 IpAddress="currentDevice.Address"
+                                 MqttPort="int.Parse(currentDevice.MqttPort)"
+                                 MqttTopics="mqttTopics"
+                                 @ref="ledControlComponent" />
+        }
+    </div>
+</div>
+
 @code {
     private List<Device> devices;
     private bool isLoading = true;
+    private Device currentDevice;
+    private Dictionary<string, List<string>> mqttTopics;
+    private string modalClass = ""; // 모달 창 표시 여부를 제어하는 변수
+    private LedControlComponent ledControlComponent;
+
+    private void OpenModal ()
+    {
+        modalClass = "show-modal"; // 모달 열기
+        ledControlComponent?.OnDialogOpened(); // 모달이 열릴 때 차트를 렌더링하도록 호출
+    }
+
+    private void CloseModal ()
+    {
+        modalClass = "";  // 모달 닫기
+    }
 
     protected override async Task OnInitializedAsync ()
     {
         devices = await DeviceDiscoveryService.DiscoverDevicesAsync();
         isLoading = false;
 
-        // 각 장비의 기본 MQTT 정보를 설정
         foreach (var device in devices)
         {
-            device.MqttServer = GetLocalIPAddress();  // 현재 Blazor가 실행 중인 PC의 IP 주소
-            device.MqttPort = "1883";                 // 기본 MQTT 포트
+            device.MqttServer = GetLocalIPAddress();
+            device.MqttPort = "1883";
 
-            // 트리 구조 생성
             device.TopicTreeRootNode = GenerateTreeNode(device.MqttTopics);
         }
     }
 
-    // 추가: JavaScript를 첫 렌더링 이후에만 실행하는 메서드
-    protected override async Task OnAfterRenderAsync (bool firstRender)
-    {
-        if (firstRender)
-        {
-            // JavaScript 초기화 호출 (필요할 경우 MatBlazor 초기화 코드 추가)
-            await JSRuntime.InvokeVoidAsync("matBlazorInitFunction");
-        }
-    }
-
-    // 트리 구조를 생성하는 함수
     private TreeNodeModel GenerateTreeNode (Dictionary<string, List<string>> mqttTopics)
     {
         var rootNode = new TreeNodeModel { Name = "MQTT Topics" };
@@ -136,20 +155,18 @@ else
 
         Console.WriteLine($"Address: {device.Address}\nMqttPort: {device.MqttPort}\nName: {device.Name}\nMqttServer: {device.MqttServer}");
 
-        // POST 요청을 통해 아두이노로 MQTT 설정 정보 전송
         await MqttService.SendPostRequestToArduino(device.Address, device.MqttServer, int.Parse(device.MqttPort), device.MqttTopics);
 
-        // MQTT 연결 시도
-        var mqttTopics = await MqttService.ConnectAndGetTopicsAsync(device.MqttServer, device.Address, int.Parse(device.MqttPort));
+        mqttTopics = await MqttService.ConnectAndGetTopicsAsync(device.MqttServer, device.Address, int.Parse(device.MqttPort));
 
         if (MqttService.IsConnected)
         {
             if (mqttTopics != null && mqttTopics.Any() && mqttTopics.First().Value != null && mqttTopics.First().Value.Any())
             {
-                // 연결 후 페이지 이동
-                var mqttTopicsJson = System.Text.Json.JsonSerializer.Serialize(mqttTopics);
-                var url = $"/LedControl?mqttAddress={device.MqttServer}&ipAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopics={mqttTopicsJson}";
-                await JSRuntime.InvokeVoidAsync("openInNewTab", url);
+                currentDevice = device;
+                OpenModal();  // 모달 창 열기
+                await Task.Delay(100);  // 모달 열리는 시간을 확보한 후 차트 렌더링
+                ledControlComponent?.OnDialogOpened();  // 차트 렌더링 트리거
             }
             else
             {
@@ -166,7 +183,7 @@ else
     {
         var host = Dns.GetHostName();
         var ip = Dns.GetHostAddresses(host)
-        .FirstOrDefault(i => i.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+    .FirstOrDefault(i => i.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
 
         return ip?.ToString() ?? "localhost";
     }
