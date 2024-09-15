@@ -6,8 +6,9 @@
 <h3>LED Control and Light Sensor Data</h3>
 
 <!-- LED 제어 버튼 -->
-<button @onclick="TurnOn">Turn On</button>
-<button @onclick="TurnOff">Turn Off</button>
+<MatButton OnClick="TurnOn" Class="custom-button turn-on-button m-1">Turn On</MatButton>
+<MatButton OnClick="TurnOff" Class="custom-button turn-off-button m-1">Turn Off</MatButton>
+
 
 <!-- 차트를 표시할 캔버스 -->
 <canvas id="lightSensorChart" width="400" height="200"></canvas>
@@ -162,15 +163,13 @@
         await JSRuntime.InvokeVoidAsync("updateLightSensorChart", "lightSensorChart", lightSensorData);
     }
 
-    // LED 켜기 함수
-    private async Task TurnOn()
+    private async Task TurnOn ()
     {
         Console.WriteLine($"{mqttTopics["led"].FirstOrDefault()} => ON");
         await MqttService.PublishMessageAsync(mqttTopics["led"].FirstOrDefault(), "ON");
     }
 
-    // LED 끄기 함수
-    private async Task TurnOff()
+    private async Task TurnOff ()
     {
         Console.WriteLine($"{mqttTopics["led"].FirstOrDefault()} => OFF");
         await MqttService.PublishMessageAsync(mqttTopics["led"].FirstOrDefault(), "OFF");

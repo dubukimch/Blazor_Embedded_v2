@@ -29,7 +29,17 @@
                 <tr>
                     <td>@device.Name</td>
                     <td>@device.Address</td>
-                    <td>@device.Description</td>
+                    <td>
+                        <!-- MatTooltip 대신 title 속성을 이용한 HTML 툴팁 적용 -->
+                        @if (device.Description.Length > 30)
+                        {
+                            <span title="@device.Description">@device.Description.Substring(0, 30)...</span>
+                        }
+                        else
+                        {
+                            @device.Description
+                        }
+                    </td>
                     <td>
                         <input type="text" placeholder="MQTT 서버" @bind="@device.MqttServer" />
                     </td>
@@ -37,32 +47,24 @@
                         <input type="text" placeholder="MQTT 포트" @bind="@device.MqttPort" />
                     </td>
                     <td>
-                        <div>
-                            @if (device.MqttTopics != null && device.MqttTopics.Any())
-                            {
-                                <ul>
-                                    @foreach (var topicGroup in device.MqttTopics)
-                                    {
-                                        <li>
-                                            @topicGroup.Key
-                                            <ul>
-                                                @foreach (var topic in topicGroup.Value)
-                                                {
-                                                    <li>@topic</li>
-                                                }
-                                            </ul>
-                                        </li>
-                                    }
-                                </ul>
-                            }
-                            else
-                            {
-                                <p>아두이노로부터 토픽을 불러오는 중...</p>
-                            }
-                        </div>
+                        @if (device.MqttTopics != null && device.MqttTopics.Any())
+                        {
+                            <MatTreeView TNode="TreeNodeModel"
+                                         RootNode="@device.TopicTreeRootNode"
+                                         GetChildNodesCallback="@((n) => n.Nodes)"
+                                         @bind-SelectedNode="@device.SelectedTopicNode">
+                                <NodeTemplate>
+                                    @context.Name
+                                </NodeTemplate>
+                            </MatTreeView>
+                        }
+                        else
+                        {
+                            <p>아두이노로부터 토픽을 불러오는 중...</p>
+                        }
                     </td>
                     <td>
-                        <button class="btn btn-primary" @onclick="() => ConnectToDevice(device)" disabled="@(!device.MqttTopics?.Any() ?? true)">연결</button>
+                        <MatButton Raised="true" Color="Success" @onclick="() => ConnectToDevice(device)" Disabled="@(!device.MqttTopics?.Any() ?? true)">연결</MatButton>
                     </td>
                 </tr>
             }
@@ -92,7 +94,36 @@ else
         {
             device.MqttServer = GetLocalIPAddress();  // 현재 Blazor가 실행 중인 PC의 IP 주소
             device.MqttPort = "1883";                 // 기본 MQTT 포트
+
+            // 트리 구조 생성
+            device.TopicTreeRootNode = GenerateTreeNode(device.MqttTopics);
         }
+    }
+
+    // 추가: JavaScript를 첫 렌더링 이후에만 실행하는 메서드
+    protected override async Task OnAfterRenderAsync (bool firstRender)
+    {
+        if (firstRender)
+        {
+            // JavaScript 초기화 호출 (필요할 경우 MatBlazor 초기화 코드 추가)
+            await JSRuntime.InvokeVoidAsync("matBlazorInitFunction");
+        }
+    }
+
+    // 트리 구조를 생성하는 함수
+    private TreeNodeModel GenerateTreeNode (Dictionary<string, List<string>> mqttTopics)
+    {
+        var rootNode = new TreeNodeModel { Name = "MQTT Topics" };
+        foreach (var topicGroup in mqttTopics)
+        {
+            var groupNode = new TreeNodeModel { Name = topicGroup.Key };
+            foreach (var topic in topicGroup.Value)
+            {
+                groupNode.Nodes.Add(new TreeNodeModel { Name = topic });
+            }
+            rootNode.Nodes.Add(groupNode);
+        }
+        return rootNode;
     }
 
     private async Task ConnectToDevice (Device device)
@@ -116,8 +147,7 @@ else
             if (mqttTopics != null && mqttTopics.Any() && mqttTopics.First().Value != null && mqttTopics.First().Value.Any())
             {
                 // 연결 후 페이지 이동
-                var mqttTopicsJson = System.Text.Json.JsonSerializer.Serialize(mqttTopics/* device.MqttTopics */);
-                //var encodedMqttTopicsJson = Uri.EscapeDataString(mqttTopicsJson); // JSON 문자열을 URL 인코딩
+                var mqttTopicsJson = System.Text.Json.JsonSerializer.Serialize(mqttTopics);
                 var url = $"/LedControl?mqttAddress={device.MqttServer}&ipAddress={device.Address}&mqttPort={device.MqttPort}&mqttTopics={mqttTopicsJson}";
                 await JSRuntime.InvokeVoidAsync("openInNewTab", url);
             }
