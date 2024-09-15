@@ -7,23 +7,23 @@
 <div class="control-container">
     <div class="left-container">
         <p>
+            <!-- MatDatePicker: 달력 아이콘을 검정색으로 표시 -->
             <MatDatePicker @bind-Value="@Date1"></MatDatePicker>
         </p>
-        <MatButton OnClick="@(_ => Date1 = DateTime.Now)">Now</MatButton>
-        <MatButton OnClick="@(_ => Date1 = null)">Empty</MatButton>
+        <MatButton Class="now-button" OnClick="@(_ => Date1 = DateTime.Now)">Now</MatButton>
     </div>
     <div class="right-container">
-        <MatButton Raised="true"
+        <MatButton 
                    OnClick="TurnOn"
                    Disabled="@isOn"
-                   Class="@($"custom-button turn-on-button {OnButtonClass}")">
+                   Class="@($"button-base turn-on-button {OnButtonClass}")">
             On
         </MatButton>
 
-        <MatButton Raised="true"
+        <MatButton 
                    OnClick="TurnOff"
                    Disabled="@isOff"
-                   Class="@($"custom-button turn-off-button {OffButtonClass}")">
+                   Class="@($"button-base turn-off-button {OffButtonClass}")">
             Off
         </MatButton>
     </div>
@@ -51,7 +51,7 @@
     private string OnButtonClass = ""; // 'On' 버튼의 추가 CSS 클래스
     private string OffButtonClass = ""; // 'Off' 버튼의 추가 CSS 클래스
 
-    public void OnDialogOpened()
+    public void OnDialogOpened ()
     {
         InvokeAsync(async () =>
         {
@@ -59,7 +59,7 @@
         });
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync ()
     {
         MqttTopics = await MqttService.ConnectAndGetTopicsAsync(MqttAddress, IpAddress, MqttPort);
 
@@ -83,7 +83,7 @@
         };
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAfterRenderAsync (bool firstRender)
     {
         if (firstRender)
         {
@@ -91,7 +91,7 @@
         }
     }
 
-    private async Task RenderChart()
+    private async Task RenderChart ()
     {
         var lightSensorData = new
         {
@@ -103,7 +103,7 @@
         await JSRuntime.InvokeVoidAsync("renderLightSensorChart", "lightSensorChart", lightSensorData);
     }
 
-    private async Task TurnOn()
+    private async Task TurnOn ()
     {
         await MqttService.PublishMessageAsync(MqttTopics["led"].FirstOrDefault(), "ON");
         isOn = true;
@@ -112,7 +112,7 @@
         OffButtonClass = ""; // 'Off' 버튼 활성화
     }
 
-    private async Task TurnOff()
+    private async Task TurnOff ()
     {
         await MqttService.PublishMessageAsync(MqttTopics["led"].FirstOrDefault(), "OFF");
         isOff = true;
@@ -121,7 +121,7 @@
         OnButtonClass = ""; // 'On' 버튼 활성화
     }
 
-    private void HandleLedControlMessage(string message)
+    private void HandleLedControlMessage (string message)
     {
         if (message == "ON")
         {
@@ -141,7 +141,7 @@
         }
     }
 
-    private void UpdateLightSensorData(string topic, string message)
+    private void UpdateLightSensorData (string topic, string message)
     {
         int value = int.Parse(message);
 
@@ -162,7 +162,7 @@
         InvokeAsync(UpdateChart);
     }
 
-    private void UpdateMorningData(string topic, int value)
+    private void UpdateMorningData (string topic, int value)
     {
         if (topic == "sensor/east") morningData[0] = value;
         else if (topic == "sensor/west") morningData[1] = value;
@@ -170,7 +170,7 @@
         else if (topic == "sensor/north") morningData[3] = value;
     }
 
-    private void UpdateAfternoonData(string topic, int value)
+    private void UpdateAfternoonData (string topic, int value)
     {
         if (topic == "sensor/east") afternoonData[0] = value;
         else if (topic == "sensor/west") afternoonData[1] = value;
@@ -178,7 +178,7 @@
         else if (topic == "sensor/north") afternoonData[3] = value;
     }
 
-    private void UpdateEveningData(string topic, int value)
+    private void UpdateEveningData (string topic, int value)
     {
         if (topic == "sensor/east") eveningData[0] = value;
         else if (topic == "sensor/west") eveningData[1] = value;
@@ -186,7 +186,7 @@
         else if (topic == "sensor/north") eveningData[3] = value;
     }
 
-    private async Task UpdateChart()
+    private async Task UpdateChart ()
     {
         var lightSensorData = new
         {
