@@ -1,0 +1,62 @@
+﻿@inject MqttService MqttService
+@inject IJSRuntime JSRuntime
+
+<h3 class="modal-title">LED Control</h3>
+
+<div class="control-container">
+    <MudDatePicker @bind-Value="Date1" />
+    <MudButton OnClick="@(async () => Date1 = DateTime.Now)" Color="Color.Primary">Now</MudButton>
+    <MudButton OnClick="TurnOn" Disabled="@isOn" Color="Color.Success">On</MudButton>
+    <MudButton OnClick="TurnOff" Disabled="@isOff" Color="Color.Error">Off</MudButton>
+</div>
+
+<div class="chart-container">
+    <canvas id="lightSensorChart"></canvas>
+</div>
+
+@code {
+    public DateTime? Date1 { get; set; } = DateTime.Now.AddDays(-10);
+
+    [Parameter] public string MqttAddress { get; set; }
+    [Parameter] public string IpAddress { get; set; }
+    [Parameter] public int MqttPort { get; set; }
+    [Parameter] public Dictionary<string, List<string>> MqttTopics { get; set; }
+
+    private int[] morningData = new int[4];
+    private int[] afternoonData = new int[4];
+    private int[] eveningData = new int[4];
+
+    private bool isOn = false;
+    private bool isOff = true;
+
+    public void OnDialogOpened ()
+    {
+        InvokeAsync(RenderChart);
+    }
+
+    private async Task RenderChart ()
+    {
+        var lightSensorData = new
+        {
+            morning = morningData,
+            afternoon = afternoonData,
+            evening = eveningData
+        };
+
+        await JSRuntime.InvokeVoidAsync("renderLightSensorChart", "lightSensorChart", lightSensorData);
+    }
+
+    private async Task TurnOn ()
+    {
+        await MqttService.PublishMessageAsync(MqttTopics["led"].FirstOrDefault(), "ON");
+        isOn = true;
+        isOff = false;
+    }
+
+    private async Task TurnOff ()
+    {
+        await MqttService.PublishMessageAsync(MqttTopics["led"].FirstOrDefault(), "OFF");
+        isOn = false;
+        isOff = true;
+    }
+}
