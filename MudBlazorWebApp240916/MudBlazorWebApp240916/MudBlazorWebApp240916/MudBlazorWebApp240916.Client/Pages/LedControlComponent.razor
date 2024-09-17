@@ -1,43 +1,61 @@
 ﻿@inject MqttService MqttService
 @inject IJSRuntime JSRuntime
 
-<MudDialog>
-    <DialogContent>
-        <h3 class="modal-title">LED Control</h3>
-
-        <!-- 컨트롤 영역: 달력과 버튼 그룹을 배치 -->
-        <div class="control-container">
-            <div class="left-container">
-                <p>
-                    <MudDatePicker @bind-Date="@Date1"></MudDatePicker>
-                </p>
-                <MudButton Class="now-button" OnClick="@(async () => Date1 = DateTime.Now)">Now</MudButton>
+<MudDialog Class="custom-dialog">
+        <DialogContent>
+            <!-- 컨트롤 영역: 달력과 아이콘 버튼 그룹을 배치 -->
+            <div class="control-container">
+                <div class="left-container">
+                    <p>
+                        <MudDatePicker @bind-Date="@Date1"></MudDatePicker>
+                    </p>
+                    <!-- Now 버튼을 아이콘으로 대체 -->
+                    <MudIconButton Icon="@Icons.Material.Filled.AccessTime"
+                                   Color="Color.Primary"
+                                   OnClick="@(async () => Date1 = DateTime.Now)"
+                                   title="Set to Now" />
+                </div>
+                <div class="right-container">
+                    <!-- LED On/Off 버튼 -->
+                    <MudToggleIconButton @bind-Toggled="IsLedOn"
+                                         Icon="@Icons.Material.Filled.PowerOff"
+                                         Color="@Color.Error"
+                                         ToggledIcon="@Icons.Material.Filled.Power"
+                                         ToggledColor="@Color.Success"
+                                         OnToggled="ToggleLed"
+                                         title="@(IsLedOn ? "Turn Off" : "Turn On")" />
+                </div>
             </div>
-            <div class="right-container">
-                <MudButton OnClick="@(async () => await TurnOn())"
-                           Disabled="@isOn"
-                           Class="@($"button-base turn-on-button {OnButtonClass}")">
-                    On
-                </MudButton>
 
-                <MudButton OnClick="@(async () => await TurnOff())"
-                           Disabled="@isOff"
-                           Class="@($"button-base turn-off-button {OffButtonClass}")">
-                    Off
-                </MudButton>
-            </div>
-        </div>
-
-        <!-- MudChart를 사용하여 실시간 센서 데이터 표시 -->
-        <MudChart ChartType="ChartType.StackedBar" ChartSeries="@Series" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
-    </DialogActions>
+            <!-- MudChart를 사용하여 실시간 센서 데이터 표시 -->
+            <MudChart ChartType="ChartType.StackedBar"
+                      ChartSeries="@Series"
+                      XAxisLabels="@XAxisLabels"
+                      Options="@ChartOptions"
+                      Width="100%" Height="350px"
+                      style="" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+        </DialogActions>
 </MudDialog>
 
 @code {
+    public object ChartOptions => new
+    {
+        scales = new
+        {
+            y = new
+            {
+                ticks = new
+                {
+                    stepSize = 100,
+                    maxTicksLimit = 5
+                }
+            }
+        }
+    };
     public DateTime? Date1 { get; set; } = DateTime.Now.AddDays(-10);
 
     [Parameter] public string MqttAddress { get; set; }
@@ -49,6 +67,7 @@
     private bool isOff = false;
     private string OnButtonClass = "";
     private string OffButtonClass = "";
+    public bool IsLedOn { get; set; } // LED 상태 (ON/OFF)
 
     public List<ChartSeries> Series { get; set; } = new List<ChartSeries>();
     public string[] XAxisLabels = { "East", "West", "South", "North" };
@@ -85,22 +104,17 @@
 
     private void Cancel () => MudDialog.Cancel();
 
-    private async Task TurnOn ()
+    private async Task ToggleLed ()
     {
-        await MqttService.PublishMessageAsync(MqttTopics["led"].First(), "ON");
-        isOn = true;
-        isOff = false;
-        OnButtonClass = "disabled-button";
-        OffButtonClass = "";
-    }
-
-    private async Task TurnOff ()
-    {
-        await MqttService.PublishMessageAsync(MqttTopics["led"].First(), "OFF");
-        isOff = true;
-        isOn = false;
-        OffButtonClass = "disabled-button";
-        OnButtonClass = "";
+        // MQTT 메시지를 통해 LED 상태 변경
+        if (IsLedOn)
+        {
+            await MqttService.PublishMessageAsync(MqttTopics["led"].First(), "ON");
+        }
+        else
+        {
+            await MqttService.PublishMessageAsync(MqttTopics["led"].First(), "OFF");
+        }
     }
 
     private void HandleMqttMessage (string topic, string payload)
@@ -124,17 +138,17 @@
 
     private void UpdateMorningData (int[] sensorData)
     {
-        morningData = sensorData;
+        morningData = sensorData.ToArray();
     }
 
     private void UpdateAfternoonData (int[] sensorData)
     {
-        afternoonData = sensorData;
+        afternoonData = sensorData.ToArray();
     }
 
     private void UpdateEveningData (int[] sensorData)
     {
-        eveningData = sensorData;
+        eveningData = sensorData.ToArray();
     }
 
     private async Task RenderChart ()
