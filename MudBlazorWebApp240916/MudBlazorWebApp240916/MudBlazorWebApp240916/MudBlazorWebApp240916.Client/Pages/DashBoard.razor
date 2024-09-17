@@ -1,5 +1,128 @@
-﻿<h3>DashBoard</h3>
+﻿@page "/Dashboard"
+@using MudBlazor
+@using MudBlazorWebApp240916.Shared.DataModel // Note 클래스가 정의된 네임스페이스
+
+@inject IDialogService DialogService
+@using MudBlazorWebApp240916.Client.Pages // AddNoteDialog의 네임스페이스
+
+
+<MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 300px;">
+                <MudText Typo="Typo.h6">Temperature</MudText>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@TemperatureSeries" XAxisLabels="@XAxisLabels" Width="100%" Height="250px" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 300px;">
+                <MudText Typo="Typo.h6">Humidity</MudText>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@HumiditySeries" XAxisLabels="@XAxisLabels" Width="100%" Height="250px" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="12" md="4">
+            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 300px;">
+                <MudText Typo="Typo.h6">Soil Moisture</MudText>
+                <MudChart ChartType="ChartType.Bar" ChartSeries="@SoilMoistureSeries" XAxisLabels="@XAxisLabels" Width="100%" Height="250px" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudPaper Elevation="2" Class="pa-4" Style="min-height: 300px;">
+                        <MudText Typo="Typo.h6">CO2 Levels</MudText>
+                        <MudChart ChartType="ChartType.Line" ChartSeries="@CO2Series" XAxisLabels="@XAxisLabels" Width="100%" Height="250px" />
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudPaper Elevation="2" Class="pa-4" Style="min-height: 150px;">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ma-2">Watering Control</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Secondary" Class="ma-2">Temperature Control</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Class="ma-2">Lighting Control</MudButton>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 150px;">
+                <MudText Typo="Typo.h6">Farm Status Overview</MudText>
+
+                @if (Notes.Count == 0)
+                {
+                    <MudText Typo="Typo.body1">
+                        All systems functioning normally. No issues detected.
+                    </MudText>
+                }
+                else
+                {
+                    <MudList T="Note">
+                        @foreach (var note in Notes)
+                        {                           
+                            <MudListItem>
+                                <MudText Typo="Typo.body1">@note.Title (@note.Date.ToString("d"))</MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+
+                <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenNoteDialog" />
+
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
 
 @code {
+    public string[] XAxisLabels = { "1 PM", "2 PM", "3 PM", "4 PM", "5 PM" };
 
+    public List<ChartSeries> TemperatureSeries { get; set; } = new List<ChartSeries>
+    {
+        new ChartSeries
+        {
+            Name = "Temperature (°C)",
+            Data = new double[] { 24, 25, 23, 26, 24 }
+        }
+    };
+
+    public List<ChartSeries> HumiditySeries { get; set; } = new List<ChartSeries>
+    {
+        new ChartSeries
+        {
+            Name = "Humidity (%)",
+            Data = new double[] { 45, 50, 47, 49, 52 }
+        }
+    };
+
+    public List<ChartSeries> SoilMoistureSeries { get; set; } = new List<ChartSeries>
+    {
+        new ChartSeries
+        {
+            Name = "Soil Moisture (%)",
+            Data = new double[] { 30, 35, 32, 33, 34 }
+        }
+    };
+
+    public List<ChartSeries> CO2Series { get; set; } = new List<ChartSeries>
+    {
+        new ChartSeries
+        {
+            Name = "CO2 (ppm)",
+            Data = new double[] { 400, 420, 410, 405, 415 }
+        }
+    };
+    private List<Note> Notes { get; set; } = new List<Note>();
+
+    private async Task OpenNoteDialog ()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+        var dialog = DialogService.Show<AddNoteDialog>("Add a new Note", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is Note note)
+        {
+            Notes.Add(note); // 메모 추가
+        }
+    }
 }
