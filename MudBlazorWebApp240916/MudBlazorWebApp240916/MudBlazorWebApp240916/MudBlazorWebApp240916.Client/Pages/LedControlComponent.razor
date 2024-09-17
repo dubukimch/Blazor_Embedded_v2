@@ -3,21 +3,13 @@
 
 <MudDialog Class="custom-dialog">
     <DialogContent>
-        <!-- 컨트롤 영역: 달력과 아이콘 버튼 그룹을 배치 -->
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
             <div style="flex-grow: 1; display: flex; align-items: center;">
                 <!-- 달력 왼쪽 정렬 -->
                 <MudDatePicker @bind-Date="@Date1" Style="max-width: 300px;" />
-                <!-- Now 버튼을 달력에서 10px 떨어진 오른쪽에 배치 -->
-                <MudIconButton Icon="@Icons.Material.Filled.AccessTime"
-                               Color="Color.Primary"
-                               OnClick="@(async () => Date1 = DateTime.Now)"
-                               title="Set to Now"
-                               Style="margin-left: 10px;" />
             </div>
-
-            <div style="flex-shrink: 0;">
-                <!-- LED On/Off 버튼을 오른쪽 끝에 배치 -->
+            <!-- 컨트롤 영역: LED On/Off 버튼과 슬라이더를 배치 -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; position: relative;">
                 <MudToggleIconButton @bind-Toggled="IsLedOn"
                                      Icon="@Icons.Material.Filled.PowerOff"
                                      Color="Color.Error"
@@ -25,6 +17,21 @@
                                      ToggledColor="Color.Success"
                                      OnToggled="ToggleLed"
                                      title="@(IsLedOn ? "Turn Off" : "Turn On")" />
+
+                <div style="transition: width 0.5s ease; overflow: hidden; width: @(IsLedOn ? "200px" : "0"); margin-left: 20px;">
+                    <!-- LED가 켜져 있을 때만 슬라이더 표시 -->
+                    @if (IsLedOn)
+                    {
+                        <MudSlider @bind-Value="LedIntensity"
+                                   Min="0" Max="100"
+                                   Step="1"
+                                   ValueLabelFormat="{0}%"
+                                   ValueLabel="true"
+                                   Color="Color.Primary"
+                                   Label="LED Intensity"
+                                   Class="custom-slider" />
+                    }
+                </div>
             </div>
         </div>
 
@@ -63,11 +70,8 @@
     [Parameter] public int MqttPort { get; set; }
     [Parameter] public Dictionary<string, List<string>> MqttTopics { get; set; }
 
-    private bool isOn = false;
-    private bool isOff = false;
-    private string OnButtonClass = "";
-    private string OffButtonClass = "";
-    public bool IsLedOn { get; set; } // LED 상태 (ON/OFF)
+    public bool IsLedOn { get; set; } = false; // LED 상태 (ON/OFF)
+    public int LedIntensity { get; set; } = 50; // LED 세기 기본값
 
     public List<ChartSeries> Series { get; set; } = new List<ChartSeries>();
     public string[] XAxisLabels = { "East", "West", "South", "North" };

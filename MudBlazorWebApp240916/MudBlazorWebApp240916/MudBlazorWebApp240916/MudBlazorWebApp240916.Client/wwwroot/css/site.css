@@ -103,3 +103,6 @@ a, .btn-link {
     color: red;
     font-size: 20px;
 }
+.custom-slider .mud-slider-value-label {
+    transform: translateY(20px); /* 라벨을 아래로 이동 */
+}
