@@ -1,15 +1,12 @@
 ﻿@page "/devices"
 @using MudBlazorWebApp240916.Shared.DataModel
-@using MudBlazorWebApp240916.Shared.Services
-@using MudBlazorWebApp240916
-
 @using System.Net
 @inject NavigationManager NavigationManager
 @inject DeviceDiscoveryService DeviceDiscoveryService
 @inject IServiceProvider Services
 @inject MqttService MqttService
 @inject IJSRuntime JSRuntime
-
+@inject IDialogService DialogService
 <head>
     <link href="css/modalStyles.css" rel="stylesheet" />
 </head>
@@ -18,28 +15,77 @@
 
 @if (devices != null && devices.Any())
 {
-    <MudTable Items="devices">
-        <HeaderContent>
-            <MudTh>이름</MudTh>
-            <MudTh>IP 주소</MudTh>
-            <MudTh>설명</MudTh>
-            <MudTh>MQTT 서버</MudTh>
-            <MudTh>MQTT 포트</MudTh>
-            <MudTh>MQTT 토픽</MudTh>
-            <MudTh>연결</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="이름">@context.Name</MudTd>
-            <MudTd DataLabel="IP 주소">@context.Address</MudTd>
-            <MudTd DataLabel="설명">@context.Description</MudTd>
-            <MudTd DataLabel="MQTT 서버">@context.MqttServer</MudTd>
-            <MudTd DataLabel="MQTT 포트">@context.MqttPort</MudTd>
-            <MudTd DataLabel="MQTT 토픽">...</MudTd>
-            <MudTd DataLabel="연결">
-                <MudButton Color="Color.Primary" OnClick="@(() => ConnectToDevice(context))">Connect</MudButton>
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>이름</th>
+                <th>IP 주소</th>
+                <th>설명</th>
+                <th>MQTT 서버</th>
+                <th>MQTT 포트</th>
+                <th>MQTT 토픽</th>
+                <th>연결</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var device in devices)
+            {
+                <tr>
+                    <td>@device.Name</td>
+                    <td>@device.Address</td>
+                    <td>
+                        @if (device.Description.Length > 30)
+                        {
+                            <span title="@device.Description">
+                                @device.Description.Substring(0, 30)...
+                            </span>
+                        }
+                        else
+                        {
+                            @device.Description
+                        }
+                    </td>
+                    <td>
+                        <input type="text" placeholder="MQTT 서버"
+                               @bind="@device.MqttServer" />
+                    </td>
+                    <td>
+                        <input type="text" placeholder="MQTT 포트"
+                               @bind="@device.MqttPort" />
+                    </td>
+                    <td>
+                        @if (device.MqttTopics != null && device.MqttTopics.Any())
+                        {
+                            <MudTreeView T="TreeNodeModel" @bind-SelectedValue="@device.SelectedTopicNode" ReadOnly>
+                                <MudTreeViewItem Text="MQTT Topics">
+                                    @foreach (var topicGroup in device.MqttTopics)
+                                    {
+                                        <MudTreeViewItem Text="@topicGroup.Key">
+                                            @foreach (var topic in topicGroup.Value)
+                            {
+                                <MudTreeViewItem Text="@topic" />
+                            }
+                        </MudTreeViewItem>
+                                    }
+                                </MudTreeViewItem>
+                            </MudTreeView>
+                        }
+                        else
+                        {
+                            <p>토픽을 불러오는 중...</p>
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-success"
+                                @onclick="@(async () => await ConnectToDevice(device))"
+                                disabled="@(!device.MqttTopics?.Any() ?? true)">
+                            연결
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }
 else if (isLoading)
 {
@@ -50,43 +96,13 @@ else
     <p>장비를 찾을 수 없습니다.</p>
 }
 
-<!-- MudBlazor 모달 -->
-<MudDialog @bind-Open="@isModalOpen">
-    <MudDialogContent>
-        @if (currentDevice != null && mqttTopics != null)
-        {
-            <LedControlComponent MqttAddress="currentDevice.MqttServer"
-                                 IpAddress="currentDevice.Address"
-                                 MqttPort="int.Parse(currentDevice.MqttPort)"
-                                 MqttTopics="mqttTopics"
-                                 @ref="ledControlComponent" />
-        }
-    </MudDialogContent>
-    <MudDialogActions>
-        <MudButton OnClick="CloseModal" Color="Color.Primary">Close</MudButton>
-    </MudDialogActions>
-</MudDialog>
-
 @code {
     private List<Device> devices;
     private bool isLoading = true;
     private Device currentDevice;
     private Dictionary<string, List<string>> mqttTopics;
-    private bool isModalOpen = false; 
-    private LedControlComponent ledControlComponent;
 
-    private void OpenModal()
-    {
-        isModalOpen = true;
-        ledControlComponent?.OnDialogOpened();
-    }
-
-    private void CloseModal()
-    {
-        isModalOpen = false;
-    }
-
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync ()
     {
         devices = await DeviceDiscoveryService.DiscoverDevicesAsync();
         isLoading = false;
@@ -95,12 +111,12 @@ else
         {
             device.MqttServer = GetLocalIPAddress();
             device.MqttPort = "1883";
-
             device.TopicTreeRootNode = GenerateTreeNode(device.MqttTopics);
         }
     }
 
-    private TreeNodeModel GenerateTreeNode(Dictionary<string, List<string>> mqttTopics)
+    // GenerateTreeNode 메서드 구현
+    private TreeNodeModel GenerateTreeNode (Dictionary<string, List<string>> mqttTopics)
     {
         var rootNode = new TreeNodeModel { Name = "MQTT Topics" };
         foreach (var topicGroup in mqttTopics)
@@ -115,7 +131,7 @@ else
         return rootNode;
     }
 
-    private async Task ConnectToDevice(Device device)
+    private async Task ConnectToDevice (Device device)
     {
         if (string.IsNullOrEmpty(device.MqttServer) || string.IsNullOrEmpty(device.MqttPort))
         {
@@ -123,37 +139,50 @@ else
             return;
         }
 
-        Console.WriteLine($"Address: {device.Address}\nMqttPort: {device.MqttPort}\nName: {device.Name}\nMqttServer: {device.MqttServer}");
+        await MqttService.SendPostRequestToArduino(device.Address,
+            device.MqttServer, int.Parse(device.MqttPort), device.MqttTopics);
 
-        await MqttService.SendPostRequestToArduino(device.Address, device.MqttServer, int.Parse(device.MqttPort), device.MqttTopics);
-
-        mqttTopics = await MqttService.ConnectAndGetTopicsAsync(device.MqttServer, device.Address, int.Parse(device.MqttPort));
+        mqttTopics = await MqttService.ConnectAndGetTopicsAsync(device.MqttServer,
+            device.Address, int.Parse(device.MqttPort));
 
         if (MqttService.IsConnected)
         {
-            if (mqttTopics != null && mqttTopics.Any() && mqttTopics.First().Value != null && mqttTopics.First().Value.Any())
+            if (mqttTopics != null && mqttTopics.Any())
             {
                 currentDevice = device;
-                OpenModal();  
-                await Task.Delay(100);  
-                ledControlComponent?.OnDialogOpened();  
+                OpenLedControlDialog(currentDevice);
             }
             else
             {
-                Console.WriteLine("MQTT 토픽에 값이 없습니다.");
+                Console.WriteLine("MQTT 토픽이 없습니다.");
             }
         }
         else
         {
-            Console.WriteLine("MQTT 연결이 되지 않았습니다.");
+            Console.WriteLine("MQTT 연결이 실패했습니다.");
         }
     }
 
-    private string GetLocalIPAddress()
+    private async Task OpenLedControlDialog (Device device)
+    {
+        var parameters = new DialogParameters
+        {
+            { "MqttAddress", device.MqttServer },
+            { "IpAddress", device.Address },
+            { "MqttPort", int.Parse(device.MqttPort) },
+            { "MqttTopics", device.MqttTopics }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<LedControlComponent>("LED Control", parameters, options);
+    }
+
+    private string GetLocalIPAddress ()
     {
         var host = Dns.GetHostName();
         var ip = Dns.GetHostAddresses(host)
-            .FirstOrDefault(i => i.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+        .FirstOrDefault(i => i.AddressFamily ==
+            System.Net.Sockets.AddressFamily.InterNetwork);
 
         return ip?.ToString() ?? "localhost";
     }

@@ -1,27 +1,27 @@
 ﻿using MQTTnet.Client;
 using MQTTnet.Protocol;
 using MQTTnet;
-using System.Text.Json;
-using System.Text;
 using MudBlazorWebApp240916.Shared.DataModel;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System;
+using System.Linq;
+using System.Text;
+
 namespace MudBlazorWebApp240916.Shared.Services
 {
-    public class MqttService
+    public class MqttService : IAsyncDisposable
     {
         private IMqttClient _client;
         public event Action<string, string> OnMessageReceived;
-
         private readonly HttpClient _httpClient;
-        private Dictionary<string, List<string>> _subscribedTopics; // 구독된 토픽 정보를 저장할 변수
+        private Dictionary<string, List<string>> _subscribedTopics;
 
         public MqttService (HttpClient httpClient)
         {
-            _httpClient = httpClient; // DI로 HttpClient 주입
+            _httpClient = httpClient;
             var factory = new MqttFactory();
             _client = factory.CreateMqttClient();
 
@@ -43,20 +43,27 @@ namespace MudBlazorWebApp240916.Shared.Services
                 OnMessageReceived?.Invoke(topic, message);
             };
 
-            _subscribedTopics = new Dictionary<string, List<string>>(); // 초기화
+            _subscribedTopics = new Dictionary<string, List<string>>();
         }
 
         public bool IsConnected => _client.IsConnected;
 
-        public void Dispose ()
+        // 구독 메서드 정의
+        public async Task SubscribeAsync (string topic)
         {
-            if (_client.IsConnected)
+            if (!IsConnected)
             {
-                _client.DisconnectAsync().Wait();  // 연결이 되어 있으면 끊기
+                Console.WriteLine("MQTT 클라이언트가 연결되지 않았습니다.");
+                return;
             }
+
+            await _client.SubscribeAsync(new MqttClientSubscribeOptionsBuilder()
+                .WithTopicFilter(topic)
+                .Build());
+
+            Console.WriteLine($"Subscribed to topic: {topic}");
         }
 
-        // MQTT 연결 메서드
         public async Task ConnectAsync (string server, int port, Dictionary<string, List<string>> mqttTopics)
         {
             if (_client.IsConnected)
@@ -66,45 +73,37 @@ namespace MudBlazorWebApp240916.Shared.Services
             }
 
             var options = new MqttClientOptionsBuilder()
-            .WithClientId(Guid.NewGuid().ToString())
-            .WithTcpServer(server, port)
-            .Build();
+                .WithClientId(Guid.NewGuid().ToString())
+                .WithTcpServer(server, port)
+                .Build();
 
             await _client.ConnectAsync(options);
 
-            // MQTT 토픽 구독
             foreach (var topic in mqttTopics.Values.SelectMany(v => v))
             {
-                await _client.SubscribeAsync(new MqttClientSubscribeOptionsBuilder()
-                    .WithTopicFilter(topic.ToString())
-                    .Build());
-                Console.WriteLine($"Subscribed to topic: {topic}");
+                await SubscribeAsync(topic); // 구독 작업을 호출
             }
 
-            _subscribedTopics = mqttTopics; // 구독한 토픽 저장
+            _subscribedTopics = mqttTopics;
         }
 
-        // MQTT 토픽 구독 및 정보 가져오기 메서드
         public async Task<Dictionary<string, List<string>>> ConnectAndGetTopicsAsync (string mqttServer, string ipAddress, int port)
         {
             if (_client.IsConnected)
             {
                 Console.WriteLine("이미 연결됨");
-                return _subscribedTopics; // 이미 구독된 토픽 정보를 반환
+                return _subscribedTopics;
             }
 
             var options = new MqttClientOptionsBuilder()
-            .WithClientId(Guid.NewGuid().ToString())
-            .WithTcpServer(mqttServer, port)
-            .Build();
+                .WithClientId(Guid.NewGuid().ToString())
+                .WithTcpServer(mqttServer, port)
+                .Build();
 
             await _client.ConnectAsync(options);
 
-            // HTTP로 토픽 정보를 요청하여 수신
             try
             {
-                // 타임아웃 설정
-                //_httpClient.Timeout = TimeSpan.FromSeconds(10);
                 var response = await _httpClient.GetAsync($"http://{ipAddress}/device_info");
 
                 if (!response.IsSuccessStatusCode)
@@ -113,10 +112,7 @@ namespace MudBlazorWebApp240916.Shared.Services
                     return null;
                 }
 
-                // 응답 내용 읽기
                 var content = await response.Content.ReadAsStringAsync();
-                //var deviceInfo = JsonSerializer.Deserialize<DeviceInfoResponse>(content);
-
                 var jsonDoc = JsonDocument.Parse(content);
                 var deviceInfo = new Device
                 {
@@ -124,34 +120,19 @@ namespace MudBlazorWebApp240916.Shared.Services
                     Address = ipAddress,
                     Description = jsonDoc.RootElement.GetProperty("description").GetString(),
                     MqttTopics = jsonDoc.RootElement
-                    .GetProperty("topics")
-                    .EnumerateObject()
-                    .ToDictionary(
-                        x => x.Name,
-                        x => new List<string> { x.Value.GetString() } // List<string>으로 변환
-                    )
+                        .GetProperty("topics")
+                        .EnumerateObject()
+                        .ToDictionary(x => x.Name, x => new List<string> { x.Value.GetString() })
                 };
-                if (deviceInfo == null)
-                {
-                    Console.WriteLine("Failed to deserialize the device info.");
-                    return null;
-                }
-                var mqttTopics = deviceInfo.MqttTopics;
-                //var mqttTopics = deviceInfo.Topics.ToDictionary(
-                //    x => x.Key,
-                //    x => new List<string> { x.Value }
-                //);
 
-                // MQTT 토픽 구독
+                var mqttTopics = deviceInfo.MqttTopics;
+
                 foreach (var topic in mqttTopics.Values)
                 {
-                    await _client.SubscribeAsync(new MqttClientSubscribeOptionsBuilder()
-                        .WithTopicFilter(topic.First())
-                        .Build());
-                    Console.WriteLine($"Subscribed to topic: {topic}");
+                    await SubscribeAsync(topic.First()); // 구독 메서드 호출
                 }
 
-                _subscribedTopics = mqttTopics;  // 구독한 토픽 저장
+                _subscribedTopics = mqttTopics;
                 return mqttTopics;
             }
             catch (HttpRequestException ex)
@@ -166,19 +147,30 @@ namespace MudBlazorWebApp240916.Shared.Services
             }
         }
 
-        // MQTT 메시지 발행
         public async Task PublishMessageAsync (string topic, string message)
         {
             var messageBuilder = new MqttApplicationMessageBuilder()
-            .WithTopic(topic)
-            .WithPayload(message)
-            .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtMostOnce)
-            .WithRetainFlag(false);
+                .WithTopic(topic)
+                .WithPayload(message)
+                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtMostOnce)
+                .WithRetainFlag(false);
 
             await _client.PublishAsync(messageBuilder.Build());
         }
 
-        // Arduino로 POST 요청 보내기
+        public async Task DisconnectAsync ()
+        {
+            if (_client.IsConnected)
+            {
+                await _client.DisconnectAsync();
+                Console.WriteLine("Disconnected from MQTT Broker.");
+            }
+        }
+
+        public async ValueTask DisposeAsync ()
+        {
+            await DisconnectAsync();
+        }
         public async Task SendPostRequestToArduino (string ipAddress, string mqttServer, int mqttPort, Dictionary<string, List<string>> mqttTopics)
         {
             var data = new
@@ -190,7 +182,6 @@ namespace MudBlazorWebApp240916.Shared.Services
 
             try
             {
-                // 요청 메시지를 수동으로 작성
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
@@ -198,7 +189,6 @@ namespace MudBlazorWebApp240916.Shared.Services
                     Content = new StringContent(JsonSerializer.Serialize(data), Encoding.UTF8, "application/json")
                 };
 
-                // HttpRequestMessage에서 Content-Length를 자동으로 처리합니다.
                 var response = await _httpClient.SendAsync(request);
 
                 if (response.IsSuccessStatusCode)
@@ -219,14 +209,5 @@ namespace MudBlazorWebApp240916.Shared.Services
                 Console.WriteLine($"알 수 없는 오류: {ex.Message}");
             }
         }
-    }
-
-    // DeviceInfoResponse 클래스 정의
-    public class DeviceInfoResponse
-    {
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public string Address { get; set; }
-        public Dictionary<string, string> Topics { get; set; }
     }
 }

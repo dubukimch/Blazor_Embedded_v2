@@ -1,18 +1,41 @@
 ﻿@inject MqttService MqttService
 @inject IJSRuntime JSRuntime
 
-<h3 class="modal-title">LED Control</h3>
+<MudDialog>
+    <DialogContent>
+        <h3 class="modal-title">LED Control</h3>
 
-<div class="control-container">
-    <MudDatePicker @bind-Value="Date1" />
-    <MudButton OnClick="@(async () => Date1 = DateTime.Now)" Color="Color.Primary">Now</MudButton>
-    <MudButton OnClick="TurnOn" Disabled="@isOn" Color="Color.Success">On</MudButton>
-    <MudButton OnClick="TurnOff" Disabled="@isOff" Color="Color.Error">Off</MudButton>
-</div>
+        <!-- 컨트롤 영역: 달력과 버튼 그룹을 배치 -->
+        <div class="control-container">
+            <div class="left-container">
+                <p>
+                    <MudDatePicker @bind-Date="@Date1"></MudDatePicker>
+                </p>
+                <MudButton Class="now-button" OnClick="@(async () => Date1 = DateTime.Now)">Now</MudButton>
+            </div>
+            <div class="right-container">
+                <MudButton OnClick="@(async () => await TurnOn())"
+                           Disabled="@isOn"
+                           Class="@($"button-base turn-on-button {OnButtonClass}")">
+                    On
+                </MudButton>
 
-<div class="chart-container">
-    <canvas id="lightSensorChart"></canvas>
-</div>
+                <MudButton OnClick="@(async () => await TurnOff())"
+                           Disabled="@isOff"
+                           Class="@($"button-base turn-off-button {OffButtonClass}")">
+                    Off
+                </MudButton>
+            </div>
+        </div>
+
+        <!-- MudChart를 사용하여 실시간 센서 데이터 표시 -->
+        <MudChart ChartType="ChartType.StackedBar" ChartSeries="@Series" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
 
 @code {
     public DateTime? Date1 { get; set; } = DateTime.Now.AddDays(-10);
@@ -22,41 +45,121 @@
     [Parameter] public int MqttPort { get; set; }
     [Parameter] public Dictionary<string, List<string>> MqttTopics { get; set; }
 
+    private bool isOn = false;
+    private bool isOff = false;
+    private string OnButtonClass = "";
+    private string OffButtonClass = "";
+
+    public List<ChartSeries> Series { get; set; } = new List<ChartSeries>();
+    public string[] XAxisLabels = { "East", "West", "South", "North" };
+
+    private int[] sensorData = new int[4]; // 센서 데이터를 저장할 배열
     private int[] morningData = new int[4];
     private int[] afternoonData = new int[4];
     private int[] eveningData = new int[4];
 
-    private bool isOn = false;
-    private bool isOff = true;
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    protected override async Task OnInitializedAsync ()
+    {
+        // MQTT 구독 시작
+        MqttService.OnMessageReceived += HandleMqttMessage;
+
+        // MQTT 구독 설정
+        await MqttService.SubscribeAsync(MqttTopics["east"].First());
+        await MqttService.SubscribeAsync(MqttTopics["west"].First());
+        await MqttService.SubscribeAsync(MqttTopics["south"].First());
+        await MqttService.SubscribeAsync(MqttTopics["north"].First());
+
+        // 초기 차트 렌더링
+        await RenderChart();
+    }
 
     public void OnDialogOpened ()
     {
-        InvokeAsync(RenderChart);
+        InvokeAsync(async () => await RenderChart());
     }
 
-    private async Task RenderChart ()
-    {
-        var lightSensorData = new
-        {
-            morning = morningData,
-            afternoon = afternoonData,
-            evening = eveningData
-        };
+    private void Submit () => MudDialog.Close(DialogResult.Ok(true));
 
-        await JSRuntime.InvokeVoidAsync("renderLightSensorChart", "lightSensorChart", lightSensorData);
-    }
+    private void Cancel () => MudDialog.Cancel();
 
     private async Task TurnOn ()
     {
-        await MqttService.PublishMessageAsync(MqttTopics["led"].FirstOrDefault(), "ON");
+        await MqttService.PublishMessageAsync(MqttTopics["led"].First(), "ON");
         isOn = true;
         isOff = false;
+        OnButtonClass = "disabled-button";
+        OffButtonClass = "";
     }
 
     private async Task TurnOff ()
     {
-        await MqttService.PublishMessageAsync(MqttTopics["led"].FirstOrDefault(), "OFF");
-        isOn = false;
+        await MqttService.PublishMessageAsync(MqttTopics["led"].First(), "OFF");
         isOff = true;
+        isOn = false;
+        OffButtonClass = "disabled-button";
+        OnButtonClass = "";
+    }
+
+    private void HandleMqttMessage (string topic, string payload)
+    {
+        int value = int.Parse(payload);
+        var currentTime = DateTime.Now;
+
+        if (MqttTopics["east"].Contains(topic)) sensorData[0] = value;
+        if (MqttTopics["west"].Contains(topic)) sensorData[1] = value;
+        if (MqttTopics["south"].Contains(topic)) sensorData[2] = value;
+        if (MqttTopics["north"].Contains(topic)) sensorData[3] = value;
+
+        // 시간대별로 센서 데이터를 업데이트
+        if (currentTime.Hour >= 6 && currentTime.Hour < 12) UpdateMorningData(sensorData);
+        if (currentTime.Hour >= 12 && currentTime.Hour < 18) UpdateAfternoonData(sensorData);
+        if (currentTime.Hour >= 18 || currentTime.Hour < 6) UpdateEveningData(sensorData);
+
+        // 차트 업데이트
+        InvokeAsync(async () => await RenderChart());
+    }
+
+    private void UpdateMorningData (int[] sensorData)
+    {
+        morningData = sensorData;
+    }
+
+    private void UpdateAfternoonData (int[] sensorData)
+    {
+        afternoonData = sensorData;
+    }
+
+    private void UpdateEveningData (int[] sensorData)
+    {
+        eveningData = sensorData;
+    }
+
+    private async Task RenderChart ()
+    {
+        Series = new List<ChartSeries>()
+        {
+            new ChartSeries() { Name = "Morning", Data = morningData.Select(x => (double)x).ToArray() },
+            new ChartSeries() { Name = "Afternoon", Data = afternoonData.Select(x => (double)x).ToArray() },
+            new ChartSeries() { Name = "Evening", Data = eveningData.Select(x => (double)x).ToArray() }
+        };
+
+        // UI 업데이트
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // IAsyncDisposable 인터페이스 구현
+    public async ValueTask DisposeAsync ()
+    {
+        // MQTT 구독 해제
+        MqttService.OnMessageReceived -= HandleMqttMessage;
+
+        // 연결 해제
+        if (MqttService.IsConnected)
+        {
+            await MqttService.DisconnectAsync();
+        }
     }
 }
