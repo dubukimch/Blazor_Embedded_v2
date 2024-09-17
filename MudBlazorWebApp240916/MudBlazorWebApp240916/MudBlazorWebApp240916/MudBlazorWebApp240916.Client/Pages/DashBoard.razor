@@ -1,50 +1,64 @@
 ﻿@page "/Dashboard"
 @using MudBlazor
 @using MudBlazorWebApp240916.Shared.DataModel // Note 클래스가 정의된 네임스페이스
-
 @inject IDialogService DialogService
 @using MudBlazorWebApp240916.Client.Pages // AddNoteDialog의 네임스페이스
-
 
 <MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
     <MudGrid>
         <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 300px;">
-                <MudText Typo="Typo.h6">Temperature</MudText>
-                <MudChart ChartType="ChartType.Line" ChartSeries="@TemperatureSeries" XAxisLabels="@XAxisLabels" Width="100%" Height="250px" />
+            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <MudText Typo="Typo.h6">Temperature</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Lightbulb" Color="Color.Tertiary" OnClick="() => OpenNoteDialog()" />
+                </div>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@TemperatureSeries" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
             </MudPaper>
         </MudItem>
+
         <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 300px;">
-                <MudText Typo="Typo.h6">Humidity</MudText>
-                <MudChart ChartType="ChartType.Line" ChartSeries="@HumiditySeries" XAxisLabels="@XAxisLabels" Width="100%" Height="250px" />
+            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <MudText Typo="Typo.h6">Humidity</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Thermostat" Color="Color.Secondary" OnClick="() => OpenNoteDialog()" />
+                </div>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@HumiditySeries" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
             </MudPaper>
         </MudItem>
+
         <MudItem xs="12" sm="12" md="4">
-            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 300px;">
-                <MudText Typo="Typo.h6">Soil Moisture</MudText>
-                <MudChart ChartType="ChartType.Bar" ChartSeries="@SoilMoistureSeries" XAxisLabels="@XAxisLabels" Width="100%" Height="250px" />
+            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <MudText Typo="Typo.h6">Soil Moisture</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.WaterDrop" Color="Color.Info" OnClick="() => OpenNoteDialog()" />
+                    @* <MudButton Variant="Variant.Outlined" Color="Color.Info" Style="border-color: white;" OnClick="() => OpenNoteDialog()" Class="custom-hover-button">
+                        <MudIcon Icon="@Icons.Material.Filled.WaterDrop" />
+                    </MudButton> *@
+
+                    <style>
+                        .custom-hover-button:hover {
+                            background-color: green; /* 마우스를 가져다 댔을 때 초록색으로 */
+                            border-color: green; /* 테두리도 초록색으로 변경 */
+                            color: white; /* 텍스트 색상 변경 (선택사항) */
+                        }
+                    </style>
+                </div>
+                <MudChart ChartType="ChartType.Bar" ChartSeries="@SoilMoistureSeries" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
             </MudPaper>
         </MudItem>
+
         <MudItem xs="12" sm="6">
-            <MudGrid>
-                <MudItem xs="12">
-                    <MudPaper Elevation="2" Class="pa-4" Style="min-height: 300px;">
-                        <MudText Typo="Typo.h6">CO2 Levels</MudText>
-                        <MudChart ChartType="ChartType.Line" ChartSeries="@CO2Series" XAxisLabels="@XAxisLabels" Width="100%" Height="250px" />
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12">
-                    <MudPaper Elevation="2" Class="pa-4" Style="min-height: 150px;">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ma-2">Watering Control</MudButton>
-                        <MudButton Variant="Variant.Filled" Color="Color.Secondary" Class="ma-2">Temperature Control</MudButton>
-                        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Class="ma-2">Lighting Control</MudButton>
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
+            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <MudText Typo="Typo.h6">CO2 Levels</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.WindPower" Color="Color.Primary" OnClick="() => OpenNoteDialog()" />
+                </div>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@CO2Series" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
+            </MudPaper>
         </MudItem>
+
         <MudItem xs="12" sm="6">
-            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 150px;">
+            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 490px;">
                 <MudText Typo="Typo.h6">Farm Status Overview</MudText>
 
                 @if (Notes.Count == 0)
@@ -57,7 +71,7 @@
                 {
                     <MudList T="Note">
                         @foreach (var note in Notes)
-                        {                           
+                        {
                             <MudListItem>
                                 <MudText Typo="Typo.body1">@note.Title (@note.Date.ToString("d"))</MudText>
                             </MudListItem>
@@ -66,7 +80,6 @@
                 }
 
                 <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenNoteDialog" />
-
             </MudPaper>
         </MudItem>
     </MudGrid>
@@ -110,6 +123,7 @@
             Data = new double[] { 400, 420, 410, 405, 415 }
         }
     };
+
     private List<Note> Notes { get; set; } = new List<Note>();
 
     private async Task OpenNoteDialog ()
