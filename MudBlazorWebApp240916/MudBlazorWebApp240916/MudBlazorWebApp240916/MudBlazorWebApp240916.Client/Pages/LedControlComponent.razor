@@ -2,43 +2,43 @@
 @inject IJSRuntime JSRuntime
 
 <MudDialog Class="custom-dialog">
-        <DialogContent>
-            <!-- 컨트롤 영역: 달력과 아이콘 버튼 그룹을 배치 -->
-            <div class="control-container">
-                <div class="left-container">
-                    <p>
-                        <MudDatePicker @bind-Date="@Date1"></MudDatePicker>
-                    </p>
-                    <!-- Now 버튼을 아이콘으로 대체 -->
-                    <MudIconButton Icon="@Icons.Material.Filled.AccessTime"
-                                   Color="Color.Primary"
-                                   OnClick="@(async () => Date1 = DateTime.Now)"
-                                   title="Set to Now" />
-                </div>
-                <div class="right-container">
-                    <!-- LED On/Off 버튼 -->
-                    <MudToggleIconButton @bind-Toggled="IsLedOn"
-                                         Icon="@Icons.Material.Filled.PowerOff"
-                                         Color="@Color.Error"
-                                         ToggledIcon="@Icons.Material.Filled.Power"
-                                         ToggledColor="@Color.Success"
-                                         OnToggled="ToggleLed"
-                                         title="@(IsLedOn ? "Turn Off" : "Turn On")" />
-                </div>
+    <DialogContent>
+        <!-- 컨트롤 영역: 달력과 아이콘 버튼 그룹을 배치 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+            <div style="flex-grow: 1; display: flex; align-items: center;">
+                <!-- 달력 왼쪽 정렬 -->
+                <MudDatePicker @bind-Date="@Date1" Style="max-width: 300px;" />
+                <!-- Now 버튼을 달력에서 10px 떨어진 오른쪽에 배치 -->
+                <MudIconButton Icon="@Icons.Material.Filled.AccessTime"
+                               Color="Color.Primary"
+                               OnClick="@(async () => Date1 = DateTime.Now)"
+                               title="Set to Now"
+                               Style="margin-left: 10px;" />
             </div>
 
-            <!-- MudChart를 사용하여 실시간 센서 데이터 표시 -->
-            <MudChart ChartType="ChartType.StackedBar"
-                      ChartSeries="@Series"
-                      XAxisLabels="@XAxisLabels"
-                      Options="@ChartOptions"
-                      Width="100%" Height="350px"
-                      style="" />
-        </DialogContent>
-        <DialogActions>
-            <MudButton OnClick="Cancel">Cancel</MudButton>
-            <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
-        </DialogActions>
+            <div style="flex-shrink: 0;">
+                <!-- LED On/Off 버튼을 오른쪽 끝에 배치 -->
+                <MudToggleIconButton @bind-Toggled="IsLedOn"
+                                     Icon="@Icons.Material.Filled.PowerOff"
+                                     Color="Color.Error"
+                                     ToggledIcon="@Icons.Material.Filled.Power"
+                                     ToggledColor="Color.Success"
+                                     OnToggled="ToggleLed"
+                                     title="@(IsLedOn ? "Turn Off" : "Turn On")" />
+            </div>
+        </div>
+
+        <!-- MudChart를 사용하여 실시간 센서 데이터 표시 -->
+        <MudChart ChartType="ChartType.StackedBar"
+                  ChartSeries="@Series"
+                  XAxisLabels="@XAxisLabels"
+                  Options="@ChartOptions"
+                  Width="100%" Height="350px" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
 </MudDialog>
 
 @code {

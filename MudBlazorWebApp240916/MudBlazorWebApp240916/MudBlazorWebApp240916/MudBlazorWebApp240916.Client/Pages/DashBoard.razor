@@ -1,8 +1,8 @@
 ﻿@page "/Dashboard"
 @using MudBlazor
-@using MudBlazorWebApp240916.Shared.DataModel // Note 클래스가 정의된 네임스페이스
+@using MudBlazorWebApp240916.Shared.DataModel
 @inject IDialogService DialogService
-@using MudBlazorWebApp240916.Client.Pages // AddNoteDialog의 네임스페이스
+@using MudBlazorWebApp240916.Client.Pages 
 
 <MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
     <MudGrid>
@@ -92,26 +92,69 @@
     {
         new ChartSeries
         {
-            Name = "Temperature (°C)",
+            Name = "Temperature1 (°C)",
             Data = new double[] { 24, 25, 23, 26, 24 }
+        },
+        new ChartSeries
+        {
+            Name = "Temperature2 (°C)",
+            Data = new double[] { 25, 26, 25, 23, 25 }
+        },
+        new ChartSeries
+        {
+            Name = "Temperature3 (°C)",
+            Data = new double[] { 27, 28, 29, 24, 23 }
+        },
+        new ChartSeries
+        {
+            Name = "Temperature4 (°C)",
+            Data = new double[] { 22, 29, 26, 29, 30 }
         }
+
     };
 
     public List<ChartSeries> HumiditySeries { get; set; } = new List<ChartSeries>
     {
         new ChartSeries
         {
-            Name = "Humidity (%)",
+            Name = "Humidity1 (%)",
             Data = new double[] { 45, 50, 47, 49, 52 }
+        },
+        new ChartSeries
+        {
+            Name = "Humidity2 (%)",
+            Data = new double[] { 35, 40, 37, 29, 12 }
+        },
+        new ChartSeries
+        {
+            Name = "Humidity3 (%)",
+            Data = new double[] { 55, 20, 37, 69, 72 }
+        },
+        new ChartSeries
+        {
+            Name = "Humidity4 (%)",
+            Data = new double[] { 15, 20, 47, 59, 12 }
         }
+
+
     };
 
     public List<ChartSeries> SoilMoistureSeries { get; set; } = new List<ChartSeries>
     {
         new ChartSeries
         {
-            Name = "Soil Moisture (%)",
-            Data = new double[] { 30, 35, 32, 33, 34 }
+            Name = "Soil Moisture1 (%)",
+            Data = new double[] { 30, 35, 32, 33, 34 },
+        },
+        new ChartSeries
+        {
+            Name = "Soil Moisture2 (%)",
+            Data = new double[] { 20, 15, 42, 23, 54 },
+        },
+        new ChartSeries
+        {
+            Name = "Soil Moisture3 (%)",
+            Data = new double[] { 20, 15, 32, 23, 39 },
         }
     };
 
@@ -119,9 +162,20 @@
     {
         new ChartSeries
         {
-            Name = "CO2 (ppm)",
-            Data = new double[] { 400, 420, 410, 405, 415 }
-        }
+            Name = "CO2 (ppm) 1",
+            Data = new double[] { 400, 420, 410, 405, 415 },
+        },
+        new ChartSeries
+        {
+            Name = "CO2 (ppm) 2",
+            Data = new double[] { 300, 320, 310, 305, 315 },
+        },
+                new ChartSeries
+        {
+            Name = "CO2 (ppm) 3",
+            Data = new double[] { 280, 520, 210, 350, 395 },
+        },
+
     };
 
     private List<Note> Notes { get; set; } = new List<Note>();
