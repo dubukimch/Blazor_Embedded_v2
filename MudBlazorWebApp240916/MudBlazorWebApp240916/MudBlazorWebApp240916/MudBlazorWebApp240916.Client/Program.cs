@@ -7,4 +7,5 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddMudServices();
 builder.Services.AddScoped<MqttService>();  // 여기서 MqttService를 등록
 builder.Services.AddScoped<DeviceDiscoveryService>(); // Register DeviceDiscoveryService to DI container
+
 await builder.Build().RunAsync();

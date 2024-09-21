@@ -20,8 +20,16 @@ builder.Services.AddScoped<MqttService>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins", builder =>
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader());
+});
 
 var app = builder.Build();
+app.UseCors("AllowAllOrigins"); // CORS »ç¿ë
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
