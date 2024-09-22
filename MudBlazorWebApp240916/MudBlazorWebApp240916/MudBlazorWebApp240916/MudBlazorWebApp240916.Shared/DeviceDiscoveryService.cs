@@ -100,7 +100,7 @@ public class DeviceDiscoveryService
     {
         try
         {
-            var response = await _httpClient.GetAsync($"http://{ipAddress}/device_info");
+            var response = await _httpClient.GetAsync($"http://{ipAddress}:5044/api/Device/device_info");
             if (response.IsSuccessStatusCode)
             {
                 var jsonString = await response.Content.ReadAsStringAsync();
@@ -114,11 +114,11 @@ public class DeviceDiscoveryService
                     Address = ipAddress,
                     Description = jsonDoc.RootElement.GetProperty("description").GetString(),
                     MqttTopics = jsonDoc.RootElement
-                    .GetProperty("topics")
+                    .GetProperty("mqttTopics")
                     .EnumerateObject()
                     .ToDictionary(
                         x => x.Name,
-                        x => new List<string> { x.Value.GetString() } // List<string>으로 변환
+                        x => x.Value.EnumerateArray().Select(v => v.GetString()).ToList() // 배열을 순회하여 문자열 리스트로 변환
                     )
                 };
                 return device;
