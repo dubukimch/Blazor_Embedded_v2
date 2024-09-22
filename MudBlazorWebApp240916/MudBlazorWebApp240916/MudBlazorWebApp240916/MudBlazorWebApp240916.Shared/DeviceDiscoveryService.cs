@@ -113,13 +113,29 @@ public class DeviceDiscoveryService
                     Name = jsonDoc.RootElement.GetProperty("name").GetString(),
                     Address = ipAddress,
                     Description = jsonDoc.RootElement.GetProperty("description").GetString(),
-                    MqttTopics = jsonDoc.RootElement
-                    .GetProperty("mqttTopics")
-                    .EnumerateObject()
-                    .ToDictionary(
-                        x => x.Name,
-                        x => x.Value.EnumerateArray().Select(v => v.GetString()).ToList() // 배열을 순회하여 문자열 리스트로 변환
-                    )
+
+                    // ConnectedDevices를 List<Device>로 파싱
+                    ConnectedDevices = jsonDoc.RootElement.GetProperty("connectedDevices").EnumerateArray()
+        .Select(cd => new Device
+        {
+            Name = cd.GetProperty("name").GetString(),
+            Address = cd.GetProperty("address").GetString(),
+            Description = cd.GetProperty("description").GetString(),
+            MqttServer = cd.GetProperty("mqttServer").GetString(),
+            MqttPort = cd.GetProperty("mqttPort").GetString(),
+            MqttTopics = cd.GetProperty("mqttTopics").EnumerateObject()
+                .ToDictionary(
+                    x => x.Name,
+                    x => x.Value.EnumerateArray().Select(v => v.GetString()).ToList()
+                )
+        }).ToList(),
+
+                    // MqttTopics를 처리
+                    MqttTopics = jsonDoc.RootElement.GetProperty("mqttTopics").EnumerateObject()
+        .ToDictionary(
+            x => x.Name,
+            x => x.Value.EnumerateArray().Select(v => v.GetString()).ToList()
+        )
                 };
                 return device;
             }
