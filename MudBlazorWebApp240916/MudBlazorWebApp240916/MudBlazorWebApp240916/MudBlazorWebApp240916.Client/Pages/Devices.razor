@@ -43,36 +43,53 @@
                 <tr>
                     <td colspan="6">
                         <!-- 자식 장치 표시 -->
-                        @if (device.ConnectedDevices != null && device.ConnectedDevices.Any())
-                        {
-                            <MudExpansionPanels>
-                                <MudExpansionPanel Text="Connected Devices">
-                                    <MudList T="string">
-                                        @foreach (var subDevice in device.ConnectedDevices)
+                       @if (device.ConnectedDevices != null && device.ConnectedDevices.Any())
+{
+    <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:300px;">
+        <thead>
+            <tr>
+                <th>이름</th>
+                <th>IP 주소</th>
+                <th>설명</th>
+                <th>MQTT 서버</th>
+                <th>MQTT 포트</th>
+                <th>연결</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var subDevice in device.ConnectedDevices)
+            {
+                <tr>
+                    <td>@subDevice.Name</td>
+                    <td>@subDevice.Address</td>
+                    <td>@subDevice.Description</td>
+                    <td>@subDevice.MqttServer</td>
+                    <td>@subDevice.MqttPort</td>
+                    <td>
+                        <MudTreeView T="string" Expanded="true">
+                            <MudTreeItem Text="MQTT Topics">
+                                @foreach (var subTopicGroup in subDevice.MqttTopics)
+                                {
+                                    <MudTreeItem Text="@subTopicGroup.Key">
+                                        @foreach (var subTopic in subTopicGroup.Value)
                                         {
-                                            <MudListItem>
-                                                @subDevice.Name - @subDevice.Address
-                                                <MudNestedList Text="MQTT Topics" Expanded="true">
-                                                    @foreach (var subTopicGroup in subDevice.MqttTopics)
-                                                    {
-                                                        <MudListItem T="string" Text="@subTopicGroup.Key">
-                                                            @foreach (var subTopic in subTopicGroup.Value)
-                                                            {
-                                                                <MudListItem T="string" Text="@subTopic" />
-                                                            }
-                                                        </MudListItem>
-                                                    }
-                                                </MudNestedList>
-                                            </MudListItem>
+                                            <MudTreeItem Text="@subTopic" />
                                         }
-                                    </MudList>
-                                </MudExpansionPanel>
-                            </MudExpansionPanels>
-                        }
-                        else
-                        {
-                            <MudText>No connected devices</MudText>
-                        }
+                                    </MudTreeItem>
+                                }
+                            </MudTreeItem>
+                        </MudTreeView>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+}
+else
+{
+    <MudText>No connected devices</MudText>
+}
+
                     </td>
                 </tr>
             }
