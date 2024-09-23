@@ -9,7 +9,6 @@
 @inject IDialogService DialogService
 
 <h3 class="connected-title">연결 가능한 장비 목록</h3>
-
 @if (availableDevices != null && availableDevices.Any())
 {
     <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:300px;">
@@ -26,8 +25,12 @@
         <tbody>
             @foreach (var device in availableDevices)
             {
-                <tr>
-                    <td>@(string.IsNullOrEmpty(device.Name) ? "알 수 없음" : device.Name)</td>
+                <!-- 부모 디바이스 (Raspberry Pi) 행 -->
+                <tr @onclick="() => ToggleDevice(device)">
+                    <td>
+                        <MudIcon Icon="@((device.IsExpanded ? Icons.Material.Filled.ArrowDropDown : Icons.Material.Filled.ArrowRight))" />
+                        @(string.IsNullOrEmpty(device.Name) ? "알 수 없음" : device.Name)
+                    </td>
                     <td>@device.Address</td>
                     <td>@device.Description</td>
                     <td>@device.MqttServer</td>
@@ -40,58 +43,28 @@
                                        Title="연결" />
                     </td>
                 </tr>
-                <tr>
-                    <td colspan="6">
-                        <!-- 자식 장치 표시 -->
-                       @if (device.ConnectedDevices != null && device.ConnectedDevices.Any())
-{
-    <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:300px;">
-        <thead>
-            <tr>
-                <th>이름</th>
-                <th>IP 주소</th>
-                <th>설명</th>
-                <th>MQTT 서버</th>
-                <th>MQTT 포트</th>
-                <th>연결</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var subDevice in device.ConnectedDevices)
-            {
-                <tr>
-                    <td>@subDevice.Name</td>
-                    <td>@subDevice.Address</td>
-                    <td>@subDevice.Description</td>
-                    <td>@subDevice.MqttServer</td>
-                    <td>@subDevice.MqttPort</td>
-                    <td>
-                        <MudTreeView T="string" Expanded="true">
-                            <MudTreeItem Text="MQTT Topics">
-                                @foreach (var subTopicGroup in subDevice.MqttTopics)
-                                {
-                                    <MudTreeItem Text="@subTopicGroup.Key">
-                                        @foreach (var subTopic in subTopicGroup.Value)
-                                        {
-                                            <MudTreeItem Text="@subTopic" />
-                                        }
-                                    </MudTreeItem>
-                                }
-                            </MudTreeItem>
-                        </MudTreeView>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </MudSimpleTable>
-}
-else
-{
-    <MudText>No connected devices</MudText>
-}
 
-                    </td>
-                </tr>
+                <!-- 자식 디바이스 (Arduino) 표시 -->
+                @if (device.IsExpanded && device.ConnectedDevices != null && device.ConnectedDevices.Any())
+                {
+                    @foreach (var subDevice in device.ConnectedDevices)
+                    {
+                        <tr>
+                            <td style="padding-left: 20px;">@subDevice.Name</td>
+                            <td>@subDevice.Address</td>
+                            <td>@subDevice.Description</td>
+                            <td>@subDevice.MqttServer</td>
+                            <td>@subDevice.MqttPort</td>
+                            <td>
+                                <MudIconButton Icon="@Icons.Material.Filled.Link"
+                                               Color="Color.Primary"
+                                               OnClick="@(async () => await ConnectToDevice(subDevice))"
+                                               Disabled="@(!subDevice.MqttTopics?.Any() ?? true)"
+                                               Title="연결" />
+                            </td>
+                        </tr>
+                    }
+                }
             }
         </tbody>
     </MudSimpleTable>
@@ -145,10 +118,9 @@ else
     </div>
 }
 
-<!-- 연결된 장비 목록 -->
 <hr class="divider" />
-<h3 class="connected-title">연결된 장비 목록</h3>
 
+<h3 class="connected-title">연결된 장비 목록</h3>
 @if (connectedDevices != null && connectedDevices.Any())
 {
     <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:300px;">
@@ -159,14 +131,18 @@ else
                 <th>설명</th>
                 <th>MQTT 서버</th>
                 <th>MQTT 포트</th>
-                <th>연결</th>
+                <th>제어</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var device in connectedDevices)
             {
-                <tr>
-                    <td>@(string.IsNullOrEmpty(device.Name) ? "알 수 없음" : device.Name)</td>
+                <!-- 부모 디바이스 (Raspberry Pi) 행 -->
+                <tr @onclick="() => ToggleDevice(device)">
+                    <td>
+                        <MudIcon Icon="@((device.IsExpanded ? Icons.Material.Filled.ArrowDropDown : Icons.Material.Filled.ArrowRight))" />
+                        @(string.IsNullOrEmpty(device.Name) ? "알 수 없음" : device.Name)
+                    </td>
                     <td>@device.Address</td>
                     <td>@device.Description</td>
                     <td>@device.MqttServer</td>
@@ -178,41 +154,27 @@ else
                                        Title="제어" />
                     </td>
                 </tr>
-                <tr>
-                    <td colspan="6">
-                        <!-- 자식 장치 표시 -->
-                        @if (device.ConnectedDevices != null && device.ConnectedDevices.Any())
-                        {
-                            <MudExpansionPanels>
-                                <MudExpansionPanel Text="Connected Devices">
-                                    <MudList T="string">
-                                        @foreach (var subDevice in device.ConnectedDevices)
-                                        {
-                                            <MudListItem>
-                                                @subDevice.Name - @subDevice.Address
-                                                <MudNestedList Text="MQTT Topics" Expanded="true">
-                                                    @foreach (var subTopicGroup in subDevice.MqttTopics)
-                                                    {
-                                                        <MudListItem T="string" Text="@subTopicGroup.Key">
-                                                            @foreach (var subTopic in subTopicGroup.Value)
-                                                            {
-                                                                <MudListItem T="string" Text="@subTopic" />
-                                                            }
-                                                        </MudListItem>
-                                                    }
-                                                </MudNestedList>
-                                            </MudListItem>
-                                        }
-                                    </MudList>
-                                </MudExpansionPanel>
-                            </MudExpansionPanels>
-                        }
-                        else
-                        {
-                            <MudText>No connected devices</MudText>
-                        }
-                    </td>
-                </tr>
+
+                <!-- 자식 디바이스 (Arduino) 표시 -->
+                @if (device.IsExpanded && device.ConnectedDevices != null && device.ConnectedDevices.Any())
+                {
+                    @foreach (var subDevice in device.ConnectedDevices)
+                    {
+                        <tr>
+                            <td style="padding-left: 20px;">@subDevice.Name</td>
+                            <td>@subDevice.Address</td>
+                            <td>@subDevice.Description</td>
+                            <td>@subDevice.MqttServer</td>
+                            <td>@subDevice.MqttPort</td>
+                            <td>
+                                <MudIconButton Icon="@Icons.Material.Filled.Settings"
+                                               Color="Color.Secondary"
+                                               OnClick="@(async () => await OpenLedControlDialog(subDevice))"
+                                               Title="제어" />
+                            </td>
+                        </tr>
+                    }
+                }
             }
         </tbody>
     </MudSimpleTable>
@@ -249,7 +211,7 @@ else
     private Device currentDevice;
     private Dictionary<string, List<string>> mqttTopics;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync ()
     {
         availableDevices = await DeviceDiscoveryService.DiscoverDevicesAsync();
         isLoading = false;
@@ -262,7 +224,49 @@ else
         }
     }
 
-    private TreeNodeModel GenerateTreeNode(Dictionary<string, List<string>> mqttTopics)
+    private void ToggleDevice (Device device)
+    {
+        device.IsExpanded = !device.IsExpanded;
+    }
+
+    private async Task ConnectToDevice (Device device)
+    {
+        if (string.IsNullOrEmpty(device.MqttServer) || string.IsNullOrEmpty(device.MqttPort))
+        {
+            Console.WriteLine("MQTT 서버와 포트 정보를 입력하세요.");
+            return;
+        }
+
+        await MqttService.SendPostRequestToArduino(device.Address, device.MqttServer, int.Parse(device.MqttPort), device.MqttTopics);
+
+        var mqttTopics = await MqttService.ConnectAndGetTopicsAsync(device.MqttServer, device.Address, int.Parse(device.MqttPort));
+
+        if (MqttService.IsConnected)
+        {
+            device.ConnectedDevices.ForEach(d => d.MqttTopics = mqttTopics);
+            connectedDevices.Add(device);
+            availableDevices.Remove(device);
+        }
+        else
+        {
+            Console.WriteLine("MQTT 연결 실패.");
+        }
+    }
+
+    private async Task OpenLedControlDialog (Device device)
+    {
+        var parameters = new DialogParameters
+        {
+            { "MqttAddress", device.MqttServer },
+            { "IpAddress", device.Address },
+            { "MqttPort", int.Parse(device.MqttPort) },
+            { "MqttTopics", device.MqttTopics }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<LedControlComponent>("LED Control", parameters, options);
+    }
+    private TreeNodeModel GenerateTreeNode (Dictionary<string, List<string>> mqttTopics)
     {
         var rootNode = new TreeNodeModel { Name = "MQTT Topics" };
         foreach (var topicGroup in mqttTopics)
@@ -276,53 +280,7 @@ else
         }
         return rootNode;
     }
-
-    private async Task ConnectToDevice(Device device)
-    {
-        if (string.IsNullOrEmpty(device.MqttServer) || string.IsNullOrEmpty(device.MqttPort))
-        {
-            Console.WriteLine("MQTT 서버와 포트 정보를 입력하세요.");
-            return;
-        }
-
-        await MqttService.SendPostRequestToArduino(device.Address, device.MqttServer, int.Parse(device.MqttPort), device.MqttTopics);
-
-        mqttTopics = await MqttService.ConnectAndGetTopicsAsync(device.MqttServer, device.Address, int.Parse(device.MqttPort));
-
-        if (MqttService.IsConnected)
-        {
-            if (mqttTopics != null && mqttTopics.Any())
-            {
-                currentDevice = device;
-                connectedDevices.Add(device); // 연결된 장비 목록에 추가
-                availableDevices.Remove(device); // 연결 가능한 장비 목록에서 제거
-            }
-            else
-            {
-                Console.WriteLine("MQTT 토픽이 없습니다.");
-            }
-        }
-        else
-        {
-            Console.WriteLine("MQTT 연결이 실패했습니다.");
-        }
-    }
-
-    private async Task OpenLedControlDialog(Device device)
-    {
-        var parameters = new DialogParameters
-        {
-            { "MqttAddress", device.MqttServer },
-            { "IpAddress", device.Address },
-            { "MqttPort", int.Parse(device.MqttPort) },
-            { "MqttTopics", device.MqttTopics }
-        };
-
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
-        await DialogService.ShowAsync<LedControlComponent>("LED Control", parameters, options);
-    }
-
-    private string GetLocalIPAddress()
+    private string GetLocalIPAddress ()
     {
         var host = Dns.GetHostName();
         var ip = Dns.GetHostAddresses(host).FirstOrDefault(i => i.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);

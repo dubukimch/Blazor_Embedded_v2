@@ -16,11 +16,15 @@ namespace MudBlazorWebApp240916.Shared.DataModel
         // 연결된 장치 목록을 나타내는 속성 추가
         public List<Device> ConnectedDevices { get; set; } = new List<Device>();
 
+        // 트리 항목이 펼쳐졌는지 여부를 나타내는 속성 추가
+        public bool IsExpanded { get; set; } = false;
+
         public Device ()
         {
             MqttTopics = new Dictionary<string, List<string>>();
         }
     }
+
     public class TreeNodeModel
     {
         public string Name { get; set; }
