@@ -4,9 +4,9 @@
 @inject NavigationManager NavigationManager
 @inject DeviceDiscoveryService DeviceDiscoveryService
 @inject IServiceProvider Services
-@inject MqttService MqttService
 @inject IJSRuntime JSRuntime
 @inject IDialogService DialogService
+@inject HttpClient Http
 
 <h3 class="connected-title">연결 가능한 장비 목록</h3>
 @if (availableDevices != null && availableDevices.Any())
@@ -17,8 +17,6 @@
                 <th>이름</th>
                 <th>IP 주소</th>
                 <th>설명</th>
-                <th>MQTT 서버</th>
-                <th>MQTT 포트</th>
                 <th>연결</th>
             </tr>
         </thead>
@@ -33,13 +31,10 @@
                     </td>
                     <td>@device.Address</td>
                     <td>@device.Description</td>
-                    <td>@device.MqttServer</td>
-                    <td>@device.MqttPort</td>
                     <td>
                         <MudIconButton Icon="@Icons.Material.Filled.Link"
                                        Color="Color.Primary"
                                        OnClick="@(async () => await ConnectToDevice(device))"
-                                       Disabled="@(!device.MqttTopics?.Any() ?? true)"
                                        Title="연결" />
                     </td>
                 </tr>
@@ -53,14 +48,23 @@
                             <td style="padding-left: 20px;">@subDevice.Name</td>
                             <td>@subDevice.Address</td>
                             <td>@subDevice.Description</td>
-                            <td>@subDevice.MqttServer</td>
-                            <td>@subDevice.MqttPort</td>
                             <td>
-                                <MudIconButton Icon="@Icons.Material.Filled.Link"
-                                               Color="Color.Primary"
-                                               OnClick="@(async () => await ConnectToDevice(subDevice))"
-                                               Disabled="@(!subDevice.MqttTopics?.Any() ?? true)"
-                                               Title="연결" />
+                                <MudTreeView T="string">
+                                    <MudTreeViewItem T="string" Text="@subDevice.Name">
+                                        @if (subDevice.MqttTopics != null)
+                                        {
+                                            @foreach (var topicGroup in subDevice.MqttTopics)
+                                            {
+                                                <MudTreeViewItem T="string" Text="@topicGroup.Key">
+                                                    @foreach (var topic in topicGroup.Value)
+                                                    {
+                                                        <MudTreeViewItem T="string" Text="@topic" />
+                                                    }
+                                                </MudTreeViewItem>
+                                            }
+                                        }
+                                    </MudTreeViewItem>
+                                </MudTreeView>
                             </td>
                         </tr>
                     }
@@ -78,14 +82,12 @@ else if (isLoading)
                     <th>이름</th>
                     <th>IP 주소</th>
                     <th>설명</th>
-                    <th>MQTT 서버</th>
-                    <th>MQTT 포트</th>
                     <th>연결</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td colspan="6" style="text-align:center;">
+                    <td colspan="4" style="text-align:center;">
                         <p>장비를 검색 중입니다...</p>
                     </td>
                 </tr>
@@ -102,14 +104,12 @@ else
                     <th>이름</th>
                     <th>IP 주소</th>
                     <th>설명</th>
-                    <th>MQTT 서버</th>
-                    <th>MQTT 포트</th>
                     <th>연결</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td colspan="6" style="text-align:center;">
+                    <td colspan="4" style="text-align:center;">
                         <p>연결할 장비가 없습니다...</p>
                     </td>
                 </tr>
@@ -129,8 +129,6 @@ else
                 <th>이름</th>
                 <th>IP 주소</th>
                 <th>설명</th>
-                <th>MQTT 서버</th>
-                <th>MQTT 포트</th>
                 <th>제어</th>
             </tr>
         </thead>
@@ -145,13 +143,11 @@ else
                     </td>
                     <td>@device.Address</td>
                     <td>@device.Description</td>
-                    <td>@device.MqttServer</td>
-                    <td>@device.MqttPort</td>
                     <td>
-                        <MudIconButton Icon="@Icons.Material.Filled.Settings"
-                                       Color="Color.Secondary"
-                                       OnClick="@(async () => await OpenLedControlDialog(device))"
-                                       Title="제어" />
+                        <MudIconButton Icon="@Icons.Material.Filled.LinkOff"
+                                       Color="Color.Error"
+                                       OnClick="@(async () => await DisconnectFromDevice(device))"
+                                       Title="연결 끊기" />
                     </td>
                 </tr>
 
@@ -164,11 +160,11 @@ else
                             <td style="padding-left: 20px;">@subDevice.Name</td>
                             <td>@subDevice.Address</td>
                             <td>@subDevice.Description</td>
-                            <td>@subDevice.MqttServer</td>
-                            <td>@subDevice.MqttPort</td>
                             <td>
+                                <!-- 연결된 장비 목록에서는 제어 버튼 활성화 -->
                                 <MudIconButton Icon="@Icons.Material.Filled.Settings"
                                                Color="Color.Secondary"
+                                               Disabled="false"
                                                OnClick="@(async () => await OpenLedControlDialog(subDevice))"
                                                Title="제어" />
                             </td>
@@ -188,14 +184,12 @@ else
                     <th>이름</th>
                     <th>IP 주소</th>
                     <th>설명</th>
-                    <th>MQTT 서버</th>
-                    <th>MQTT 포트</th>
-                    <th>연결</th>
+                    <th>제어</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td colspan="6" style="text-align:center;">
+                    <td colspan="4" style="text-align:center;">
                         <p>연결된 장비가 없습니다...</p>
                     </td>
                 </tr>
@@ -208,20 +202,11 @@ else
     private List<Device> availableDevices;
     private List<Device> connectedDevices = new List<Device>();
     private bool isLoading = true;
-    private Device currentDevice;
-    private Dictionary<string, List<string>> mqttTopics;
 
     protected override async Task OnInitializedAsync ()
     {
         availableDevices = await DeviceDiscoveryService.DiscoverDevicesAsync();
         isLoading = false;
-
-        foreach (var device in availableDevices)
-        {
-            device.MqttServer = GetLocalIPAddress(); // 고정된 MQTT 서버
-            device.MqttPort = "1883"; // 고정된 MQTT 포트
-            device.TopicTreeRootNode = GenerateTreeNode(device.MqttTopics);
-        }
     }
 
     private void ToggleDevice (Device device)
@@ -231,26 +216,14 @@ else
 
     private async Task ConnectToDevice (Device device)
     {
-        if (string.IsNullOrEmpty(device.MqttServer) || string.IsNullOrEmpty(device.MqttPort))
-        {
-            Console.WriteLine("MQTT 서버와 포트 정보를 입력하세요.");
-            return;
-        }
+        connectedDevices.Add(device);
+        availableDevices.Remove(device);
+    }
 
-        await MqttService.SendPostRequestToArduino(device.Address, device.MqttServer, int.Parse(device.MqttPort), device.MqttTopics);
-
-        var mqttTopics = await MqttService.ConnectAndGetTopicsAsync(device.MqttServer, device.Address, int.Parse(device.MqttPort));
-
-        if (MqttService.IsConnected)
-        {
-            device.ConnectedDevices.ForEach(d => d.MqttTopics = mqttTopics);
-            connectedDevices.Add(device);
-            availableDevices.Remove(device);
-        }
-        else
-        {
-            Console.WriteLine("MQTT 연결 실패.");
-        }
+    private async Task DisconnectFromDevice (Device device)
+    {
+        connectedDevices.Remove(device);
+        availableDevices.Add(device);
     }
 
     private async Task OpenLedControlDialog (Device device)
@@ -265,27 +238,6 @@ else
 
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
         await DialogService.ShowAsync<LedControlComponent>("LED Control", parameters, options);
-    }
-    private TreeNodeModel GenerateTreeNode (Dictionary<string, List<string>> mqttTopics)
-    {
-        var rootNode = new TreeNodeModel { Name = "MQTT Topics" };
-        foreach (var topicGroup in mqttTopics)
-        {
-            var groupNode = new TreeNodeModel { Name = topicGroup.Key };
-            foreach (var topic in topicGroup.Value)
-            {
-                groupNode.Nodes.Add(new TreeNodeModel { Name = topic });
-            }
-            rootNode.Nodes.Add(groupNode);
-        }
-        return rootNode;
-    }
-    private string GetLocalIPAddress ()
-    {
-        var host = Dns.GetHostName();
-        var ip = Dns.GetHostAddresses(host).FirstOrDefault(i => i.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-
-        return ip?.ToString() ?? "localhost";
     }
 }
 
