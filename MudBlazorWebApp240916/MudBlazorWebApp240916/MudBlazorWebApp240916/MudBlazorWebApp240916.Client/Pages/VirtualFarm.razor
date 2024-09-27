@@ -5,8 +5,8 @@
     <MudItem xs="12">
         <MudPaper>
             <h3>3D Dashboard</h3>
-            <div id="unity-container" class="unity-desktop" style="width: 960px; height: 600px;">
-                <canvas id="unity-canvas" width="1280" height="960"></canvas>
+            <div id="unity-container" class="unity-desktop" style="width: 1920px; height: 1080px;">
+                <canvas id="unity-canvas" width="1920" height="1080"></canvas>
                 <div id="unity-loading-bar" style="display:none;">
                     <div id="unity-logo"></div>
                     <div id="unity-progress-bar-empty">
@@ -52,12 +52,13 @@
                 var buildUrl = 'Build';
                 var loaderUrl = buildUrl + '/wwwroot.loader.js';
                 var config = {{
+                    TOTAL_MEMORY: 5 * 1024 * 1024 * 1024,
                     dataUrl: buildUrl + '/wwwroot.data.txt',
                     frameworkUrl: buildUrl + '/wwwroot.framework.js',
                     codeUrl: buildUrl + '/wwwroot.wasm',
                     streamingAssetsUrl: 'StreamingAssets',
                     companyName: 'DefaultCompany',
-                    productName: 'farmTest240531',
+                    productName: 'farmTest240928_02',
                     productVersion: '0.1',
                     showBanner: unityShowBanner,
                 }};
@@ -67,8 +68,8 @@
                     config.devicePixelRatio = 1;
                     unityShowBanner('WebGL builds are not supported on mobile devices.');
                 }} else {{
-                    canvas.style.width = '1280px';
-                    canvas.style.height = '960px';
+                    canvas.style.width = '1920px';
+                    canvas.style.height = '1080px';
                 }}
                 loadingBar.style.display = 'block';
 
