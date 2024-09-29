@@ -1,0 +1,92 @@
+﻿@page "/"
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JS
+
+<h3>차트 유형 선택</h3>
+<select @onchange="OnChartTypeChange">
+    <option value="bar">막대형 차트</option>
+    <option value="line">선형 차트</option>
+    <option value="pie">원형 차트</option>
+</select>
+
+<h3>JSON 파일 선택</h3>
+<select @onchange="OnDataFileChange">
+    @if (fileList != null)
+    {
+        @foreach (var file in fileList)
+        {
+            <option value="@file">@file</option>
+        }
+    }
+</select>
+
+<canvas id="myChart" width="400" height="200"></canvas>
+
+@code {
+    private string chartType = "bar";
+    private string selectedDataFile;
+    private List<string> fileList;  // 파일 목록 저장
+    private ChartData chartData;
+    private bool shouldRenderChart = false;  // 차트를 렌더링해야 하는지 여부
+
+    protected override async Task OnInitializedAsync ()
+    {
+        // 파일 목록을 서버에서 가져옴
+        var httpClient = HttpClientFactory.CreateClient("default");
+        fileList = await httpClient.GetFromJsonAsync<List<string>>("api/files/list");
+
+        if (fileList?.Count > 0)
+        {
+            selectedDataFile = fileList[0]; // 첫 번째 파일 선택
+            await LoadChartData(); // 데이터 로드 및 차트 렌더링
+        }
+    }
+
+    private async Task OnChartTypeChange (ChangeEventArgs e)
+    {
+        chartType = e.Value.ToString();
+        await RenderChart(); // 차트 렌더링
+    }
+
+    private async Task OnDataFileChange (ChangeEventArgs e)
+    {
+        selectedDataFile = e.Value.ToString();
+        await LoadChartData(); // 선택한 파일로 데이터 로드
+    }
+
+    private async Task LoadChartData ()
+    {
+        if (string.IsNullOrEmpty(selectedDataFile)) return;
+
+        // 선택한 파일의 데이터를 가져옴
+        var httpClient = HttpClientFactory.CreateClient("default");
+        var jsonData = await httpClient.GetStringAsync($"data/{selectedDataFile}");
+        chartData = System.Text.Json.JsonSerializer.Deserialize<ChartData>(jsonData);
+
+        shouldRenderChart = true;
+    }
+
+    protected override async Task OnAfterRenderAsync (bool firstRender)
+    {
+        if (shouldRenderChart && chartData != null)
+        {
+            await RenderChart(); // 데이터를 기반으로 차트를 렌더링
+            shouldRenderChart = false; // 차트를 렌더링한 후 상태 초기화
+        }
+    }
+
+    private async Task RenderChart ()
+    {
+        if (chartData != null)
+        {
+            // JavaScript를 호출하여 차트를 렌더링
+            await JS.InvokeVoidAsync("renderChart", chartType, chartData.XAxis, chartData.YAxis);
+        }
+    }
+
+    public class ChartData
+    {
+        public List<string> XAxis { get; set; }
+        public List<double> YAxis { get; set; }
+    }
+}
