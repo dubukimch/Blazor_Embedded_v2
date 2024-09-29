@@ -1,0 +1,46 @@
+﻿<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    window.renderChart = function (chartType, xAxisData, yAxisData) {
+        var ctx = document.getElementById('myChart').getContext('2d');
+
+        // 기존 차트가 있으면 제거
+        if (window.myChart) {
+            window.myChart.destroy();
+        }
+
+        // 차트 유형에 따라 차트를 동적으로 생성
+        window.myChart = new Chart(ctx, {
+            type: chartType,  // 히스토그램은 막대형 차트로 처리
+            data: {
+                labels: xAxisData,
+                datasets: [{
+                    label: '데이터',
+                    data: yAxisData,
+                    backgroundColor: chartType === 'pie' ? generatePieColors(yAxisData.length) : 'rgba(75, 192, 192, 0.2)',
+                    borderColor: chartType === 'pie' ? '#fff' : 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: chartType !== 'pie' ? {
+                    y: {
+                        beginAtZero: true
+                    }
+                } : {},  // 원형 차트는 축이 없으므로 비활성화
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    };
+
+    // 원형 차트를 위한 색상 생성
+    function generatePieColors(numSegments) {
+        var colors = [];
+        for (var i = 0; i < numSegments; i++) {
+            colors.push('rgba(' + Math.floor(Math.random() * 255) + ', ' +
+                Math.floor(Math.random() * 255) + ', ' +
+                Math.floor(Math.random() * 255) + ', 0.5)');
+        }
+        return colors;
+    }
+</script>

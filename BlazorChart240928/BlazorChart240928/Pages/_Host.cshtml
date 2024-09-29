@@ -1,0 +1,14 @@
+﻿@page "/"
+@namespace BlazorChart240928.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = "_Layout";
+}
+
+<component type="typeof(App)" render-mode="ServerPrerendered" />
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- 로컬 chartScripts.js -->
+<script src="js/chartScripts.js"></script>

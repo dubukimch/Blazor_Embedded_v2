@@ -1,0 +1,175 @@
+﻿@page "/"
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JS
+
+<h3>JSON 파일 선택</h3>
+<select @onchange="OnDataFileChange">
+    <option value="" selected disabled>JSON 파일 선택</option>
+    @if (fileList != null)
+    {
+        @foreach (var file in fileList)
+        {
+            <option value="@file">@file</option>
+        }
+    }
+</select>
+
+@if (availableChartTypes != null && availableChartTypes.Count > 0)
+{
+    <h3>차트 유형 선택</h3>
+    <select @onchange="OnChartTypeChange">
+        <option value="" selected disabled>차트 유형 선택</option>
+        @foreach (var chartType in availableChartTypes)
+        {
+            <option value="@chartType.Key" disabled="@(chartType.Value == false)">@chartType.Key</option>
+        }
+    </select>
+}
+
+<canvas id="myChart" width="600" height="400"></canvas>
+
+@code {
+    private string selectedDataFile;
+    private string chartType = "";
+    private List<string> fileList;  // JSON 파일 목록
+    private Dictionary<string, bool> availableChartTypes = new Dictionary<string, bool>(); // 차트 유형과 활성화 상태
+    private ChartData chartData;
+    private bool shouldRenderChart = false;
+
+    // 모든 차트 유형 목록
+    private List<string> allChartTypes = new List<string> {
+        "bar", "stackedBar", "barHorizontal", "line", "pie", "doughnut", "radar", "polarArea", "bubble", "scatter"
+    };
+
+    protected override async Task OnInitializedAsync ()
+    {
+        var httpClient = HttpClientFactory.CreateClient("default");
+        fileList = await httpClient.GetFromJsonAsync<List<string>>("api/files/list");
+    }
+
+    private async Task OnDataFileChange (ChangeEventArgs e)
+    {
+        selectedDataFile = e.Value.ToString();
+        await LoadChartData();
+    }
+
+    private async Task LoadChartData ()
+    {
+        if (string.IsNullOrEmpty(selectedDataFile)) return;
+
+        var httpClient = HttpClientFactory.CreateClient("default");
+        var jsonData = await httpClient.GetStringAsync($"data/{selectedDataFile}");
+        chartData = System.Text.Json.JsonSerializer.Deserialize<ChartData>(jsonData);
+
+        UpdateAvailableChartTypes(); // 데이터를 기반으로 차트 유형 업데이트
+        shouldRenderChart = false;
+    }
+
+    private void UpdateAvailableChartTypes ()
+    {
+        availableChartTypes.Clear();
+
+        // 두 가지 데이터 형식에 맞춰 차트 유형 활성화
+        bool isMultiDataset = chartData.Data != null && chartData.Data.Count > 0;
+        bool isSingleYAxis = chartData.YAxis != null && chartData.YAxis.Count > 0;
+
+        foreach (var chart in allChartTypes)
+        {
+            switch (chart)
+            {
+                case "bar":
+                case "stackedBar":
+                    availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
+                    break;
+
+                case "barHorizontal":
+                    availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
+                    break;
+
+                case "line":
+                    availableChartTypes[chart] = (isMultiDataset && chartData.XAxis.Count >= 2) || (isSingleYAxis && chartData.XAxis.Count >= 2);
+                    break;
+
+                case "pie":
+                case "doughnut":
+                    availableChartTypes[chart] = isSingleYAxis || (isMultiDataset && chartData.Data.Count == 1);
+                    break;
+
+                case "radar":
+                case "polarArea":
+                    availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
+                    break;
+
+                case "bubble":
+                case "scatter":
+                    availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
+                    break;
+
+                default:
+                    availableChartTypes[chart] = false;
+                    break;
+            }
+        }
+
+        if (!availableChartTypes.ContainsKey(chartType) || !availableChartTypes[chartType])
+        {
+            chartType = "";
+        }
+    }
+
+    private async Task OnChartTypeChange (ChangeEventArgs e)
+    {
+        chartType = e.Value.ToString();
+
+        if (!string.IsNullOrEmpty(chartType) && availableChartTypes[chartType])
+        {
+            await RenderChart();
+        }
+    }
+
+    private async Task RenderChart ()
+    {
+        if (chartData != null && !string.IsNullOrEmpty(chartType))
+        {
+            // 단일 YAxis 또는 다중 데이터셋 처리
+            List<ChartDataset> datasets;
+
+            if (chartData.YAxis != null && chartData.YAxis.Count > 0)
+            {
+                // 단일 데이터셋 처리 (YAxis)
+                datasets = new List<ChartDataset>
+                {
+                    new ChartDataset
+                    {
+                        label = "데이터셋",
+                        data = chartData.YAxis
+                    }
+                };
+            }
+            else
+            {
+                // 다중 데이터셋 처리
+                datasets = chartData.Data.Select(d => new ChartDataset
+                    {
+                        label = d.label,
+                        data = d.data
+                    }).ToList();
+            }
+
+            await JS.InvokeVoidAsync("renderChart", chartType, chartData.XAxis, datasets);
+        }
+    }
+
+    public class ChartData
+    {
+        public List<string> XAxis { get; set; } = new List<string>();
+        public List<double> YAxis { get; set; } = new List<double>(); // YAxis가 있는 경우
+        public List<ChartDataset> Data { get; set; } = new List<ChartDataset>(); // 다중 데이터셋이 있는 경우
+    }
+
+    public class ChartDataset
+    {
+        public string label { get; set; } = "";
+        public List<double> data { get; set; } = new List<double>();
+    }
+}
