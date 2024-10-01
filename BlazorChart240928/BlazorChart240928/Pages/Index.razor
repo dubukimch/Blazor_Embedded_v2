@@ -38,8 +38,9 @@
 
     // 모든 차트 유형 목록
     private List<string> allChartTypes = new List<string> {
-        "bar", "stackedBar", "barHorizontal", "line", "pie", "doughnut", "radar", "polarArea", "bubble", "scatter"
-    };
+    "bar", "stackedBar", "barHorizontal", "line", "pie", "doughnut", "radar", "polarArea", "bubble", "scatter", "map" // map 추가
+};
+
 
     protected override async Task OnInitializedAsync ()
     {
@@ -100,11 +101,17 @@
                     availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
                     break;
 
-                case "bubble":
                 case "scatter":
-                    availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
+                    availableChartTypes[chart] = chartData.XAxis.All(IsNumeric) && chartData.YAxis != null && chartData.YAxis.Count > 0;
                     break;
 
+                case "bubble":
+                    availableChartTypes[chart] = chartData.XAxis.All(IsNumeric) && chartData.YAxis != null && chartData.YAxis.Count > 0;
+                    break;
+
+                case "map":
+                    availableChartTypes[chart] = chartData.XAxis.All(x => !IsNumeric(x)) && chartData.YAxis != null && chartData.YAxis.Count > 0;
+                    break;
                 default:
                     availableChartTypes[chart] = false;
                     break;
@@ -159,7 +166,10 @@
             await JS.InvokeVoidAsync("renderChart", chartType, chartData.XAxis, datasets);
         }
     }
-
+    private bool IsNumeric (string value)
+    {
+        return double.TryParse(value, out _);
+    }
     public class ChartData
     {
         public List<string> XAxis { get; set; } = new List<string>();
