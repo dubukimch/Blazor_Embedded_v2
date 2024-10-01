@@ -1,52 +1,96 @@
 ﻿@page "/VirtualFarm"
 @inject IJSRuntime JSRuntime
+@inject IDialogService DialogService
+<h3>3D Dashboard</h3>
 
-<MudContainer>
-    <MudItem xs="12">
-        <MudPaper>
-            <h3>3D Dashboard</h3>
+<!-- Unity 크기 조정 입력 필드 -->
+<div>
+    <label for="widthInput">Width: </label>
+    <input id="widthInput" type="number" @bind="width" @oninput="ResizeUnity" />
+    <label for="heightInput">Height: </label>
+    <input id="heightInput" type="number" @bind="height" @oninput="ResizeUnity" />
 
-            <!-- Unity 크기 조정 입력 필드 -->
-            <div>
-                <label for="widthInput">Width: </label>
-                <input id="widthInput" type="number" @bind="width" @oninput="ResizeUnity" />
-                <label for="heightInput">Height: </label>
-                <input id="heightInput" type="number" @bind="height" @oninput="ResizeUnity" />
-            </div>
+    <!-- MudIconButton을 사용한 전체 화면 버튼 -->
+    <MudIconButton Icon="@Icons.Material.Filled.Fullscreen" Color="Color.Secondary" OnClick="SetUnityFullscreen" />
+</div>
 
-            <div id="unity-container" class="unity-desktop" style="width: @(width)px; height: @(height)px;">
-                <canvas id="unity-canvas" width="@width" height="@height"></canvas>
-                <div id="unity-loading-bar" style="display:none;">
-                    <div id="unity-logo"></div>
-                    <div id="unity-progress-bar-empty">
-                        <div id="unity-progress-bar-full"></div>
-                    </div>
-                </div>
-                <div id="unity-warning"></div>
-                <div id="unity-footer">
-                    <div id="unity-webgl-logo"></div>
-                    <div id="unity-fullscreen-button"></div>
-                    <div id="unity-build-title">farmTest240531</div>
-                </div>
-            </div>
-        </MudPaper>
-    </MudItem>
-</MudContainer>
-<button @onclick="SetUnityFullscreen">전체 화면</button>
+<!-- Unity WebGL 컨테이너 -->
+<div id="unity-container" class="unity-desktop" style="width: @(width); height: @(height);">
+    <canvas id="unity-canvas" width="@width" height="@height"></canvas>
+    <div id="unity-loading-bar" style="display:none;">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+            <div id="unity-progress-bar-full"></div>
+        </div>
+    </div>
+    <div id="unity-warning"></div>
+    <div id="unity-footer">
+        <div id="unity-webgl-logo"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">farmTest240531</div>
+    </div>
+</div>
+
+
 @code {
     private int width { get; set; } = 1920; // 기본값
     private int height { get; set; } = 1080; // 기본값
 
-    private async Task ResizeUnity(ChangeEventArgs e)
+        // [JSInvokable("ShowBlazorDialog")]
+        // public async Task ShowBlazorDialog (string dialogType)
+        // {
+        //     switch (dialogType)
+        //     {
+        //         case "LedControl":
+        //             // Dialog 열기
+        //             await DialogService.ShowAsync<LedControlComponent>("LED Control Dialog");
+        //             break;
+        //         case "WaterControl":
+        //             await DialogService.ShowAsync<AddNoteDialog>("Water Control Dialog");
+        //             break;
+        //         case "AirControl":
+        //         await DialogService.ShowAsync<LedControlComponent>("Air Control Dialog");
+        //             break;
+        //         case "MemoList":
+        //         await DialogService.ShowAsync<AddNoteDialog>("Memo List Dialog");
+        //             break;
+        //         default:
+        //             Console.WriteLine("Unknown dialog type: " + dialogType);
+        //             break;
+        //     }
+        // }
+    
+
+
+    // Led Control Dialog 열기 - 기존 코드 활용
+    // private async Task OpenLedControlDialog (Device device)
+    // {
+    //     // MqttTopics를 문자열로 변환하여 DialogParameters에 전달하는 방법
+    //     var topicsAsString = string.Join(", ", device.MqttTopics.SelectMany(kvp => kvp.Value));
+
+    //     var parameters = new DialogParameters
+    // {
+    //     { "MqttAddress", device.MqttServer },
+    //     { "IpAddress", device.Address },
+    //     { "MqttPort", int.Parse(device.MqttPort) },
+    //     { "MqttTopics", topicsAsString }  // MqttTopics를 처리하여 전달
+    // };
+
+    //     var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+    //     await DialogService.ShowAsync<LedControlComponent>("LED Control", parameters, options);
+    // }
+
+    private async Task ResizeUnity (ChangeEventArgs e)
     {
         // Unity 창 크기 조정
         await JSRuntime.InvokeVoidAsync("resizeUnityCanvas", width, height);
     }
+
     private async Task SetUnityFullscreen ()
     {
         await JSRuntime.InvokeVoidAsync("setUnityFullscreen");
-
     }
+
     protected override async Task OnAfterRenderAsync (bool firstRender)
     {
         if (firstRender)
