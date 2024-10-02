@@ -45,8 +45,6 @@
             }]
         };
     }
-
-    // Scatter chart 수정
     if (chartType === 'scatter') {
         chartConfig.type = 'scatter';
         chartConfig.data.datasets = datasets.map(d => ({
@@ -143,7 +141,6 @@ function renderChart(chartType, xAxis, datasets) {
             });
     }
 }
-
 function getRandomColor() {
     var letters = '0123456789ABCDEF';
     var color = '#';

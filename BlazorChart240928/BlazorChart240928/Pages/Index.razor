@@ -40,8 +40,6 @@
     private List<string> allChartTypes = new List<string> {
     "bar", "stackedBar", "barHorizontal", "line", "pie", "doughnut", "radar", "polarArea", "bubble", "scatter", "map" // map 추가
 };
-
-
     protected override async Task OnInitializedAsync ()
     {
         var httpClient = HttpClientFactory.CreateClient("default");
@@ -100,7 +98,6 @@
                 case "polarArea":
                     availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
                     break;
-
                 case "scatter":
                     availableChartTypes[chart] = chartData.XAxis.All(IsNumeric) && chartData.YAxis != null && chartData.YAxis.Count > 0;
                     break;
