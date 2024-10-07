@@ -1,14 +1,17 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using MudBlazor;
 using MudBlazor.Services;
 using MudBlazorWebApp240916.Shared.Services;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddMudServices();
-builder.Services.AddScoped<MqttService>();  // ¿©±â¼­ MqttService¸¦ µî·Ï
+builder.Services.AddScoped<MqttService>();  // ï¿½ï¿½ï¿½â¼­ MqttServiceï¿½ï¿½ ï¿½ï¿½ï¿½
 builder.Services.AddScoped<DeviceDiscoveryService>(); // Register DeviceDiscoveryService to DI container
+builder.Services.AddScoped<IDialogService, DialogService>();
+builder.Services.AddScoped<DialogServiceHandler>();
 builder.Services.AddHttpClient("MyHttpClient", client =>
 {
-    client.BaseAddress = new Uri("http://172.30.1.12:5044"); // ¿¹: http://192.168.1.100:5000/
+    client.BaseAddress = new Uri("http://172.30.1.12:5044"); // ï¿½ï¿½: http://192.168.1.100:5000/
 });
 await builder.Build().RunAsync();

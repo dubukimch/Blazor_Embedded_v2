@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.StaticFiles;
+using MudBlazor;
 using MudBlazor.Services;
 using MudBlazorWebApp240916.Components;
 using MudBlazorWebApp240916.Shared.Services;
@@ -16,7 +17,8 @@ builder.Services.AddMudServices();
 builder.Services.AddScoped<DeviceDiscoveryService>();
 // Register MqttService
 builder.Services.AddScoped<MqttService>();
-
+builder.Services.AddScoped<IDialogService, DialogService>();
+builder.Services.AddScoped<DialogServiceHandler>();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
@@ -30,28 +32,28 @@ builder.Services.AddCors(options =>
 });
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    serverOptions.Limits.MaxRequestBodySize = 524288000; // 50MB·Î Á¦ÇÑ ¼³Á¤
+    serverOptions.Limits.MaxRequestBodySize = 524288000; // 50MBï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 });
 builder.Services.Configure<IISServerOptions>(options =>
 {
-    options.MaxRequestBodySize = 524288000; // 50MB·Î Á¦ÇÑ ¼³Á¤
+    options.MaxRequestBodySize = 524288000; // 50MBï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 });
 var app = builder.Build();
-app.UseCors("AllowAllOrigins"); // CORS »ç¿ë
-// FileExtensionContentTypeProvider ¼³Á¤
+app.UseCors("AllowAllOrigins"); // CORS ï¿½ï¿½ï¿½
+// FileExtensionContentTypeProvider ï¿½ï¿½ï¿½ï¿½
 var provider = new FileExtensionContentTypeProvider();
 provider.Mappings[".unityweb"] = "application/octet-stream";
 provider.Mappings[".data"] = "application/octet-stream";
 provider.Mappings[".wasm"] = "application/wasm";
 provider.Mappings[".symbols.json"] = "application/octet-stream";
 
-// Static Files ¹Ìµé¿þ¾î¿¡ ºê·ÎÆ²¸® ¾ÐÃà ÆÄÀÏ ¼³Á¤ Ãß°¡
+// Static Files ï¿½Ìµï¿½ï¿½ï¿½î¿¡ ï¿½ï¿½ï¿½Æ²ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
 app.UseStaticFiles(new StaticFileOptions
 {
     ContentTypeProvider = provider,
     OnPrepareResponse = ctx =>
     {
-        // ºê·ÎÆ²¸® ÆÄÀÏ¿¡ ´ëÇØ Content-Encoding Çì´õ Ãß°¡
+        // ï¿½ï¿½ï¿½Æ²ï¿½ï¿½ ï¿½ï¿½ï¿½Ï¿ï¿½ ï¿½ï¿½ï¿½ï¿½ Content-Encoding ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
         if (ctx.File.Name.EndsWith(".br"))
         {
             ctx.Context.Response.Headers.Add("Content-Encoding", "br");
@@ -60,7 +62,7 @@ app.UseStaticFiles(new StaticFileOptions
         {
             ctx.Context.Response.Headers.Add("Content-Encoding", "gzip");
         }
-        // ±âº» Ä³½Ã ¼³Á¤
+        // ï¿½âº» Ä³ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         ctx.Context.Response.Headers.Add("Cache-Control", "public,max-age=31536000");
     }
 });

@@ -1,6 +1,7 @@
 ﻿@page "/VirtualFarm"
 @inject IJSRuntime JSRuntime
 @inject IDialogService DialogService
+@inject DialogServiceHandler dialogServiceHandler
 <h3>3D Dashboard</h3>
 
 <!-- Unity 크기 조정 입력 필드 -->
@@ -36,49 +37,49 @@
     private int width { get; set; } = 1920; // 기본값
     private int height { get; set; } = 1080; // 기본값
 
-        // [JSInvokable("ShowBlazorDialog")]
-        // public async Task ShowBlazorDialog (string dialogType)
-        // {
-        //     switch (dialogType)
-        //     {
-        //         case "LedControl":
-        //             // Dialog 열기
-        //             await DialogService.ShowAsync<LedControlComponent>("LED Control Dialog");
-        //             break;
-        //         case "WaterControl":
-        //             await DialogService.ShowAsync<AddNoteDialog>("Water Control Dialog");
-        //             break;
-        //         case "AirControl":
-        //         await DialogService.ShowAsync<LedControlComponent>("Air Control Dialog");
-        //             break;
-        //         case "MemoList":
-        //         await DialogService.ShowAsync<AddNoteDialog>("Memo List Dialog");
-        //             break;
-        //         default:
-        //             Console.WriteLine("Unknown dialog type: " + dialogType);
-        //             break;
-        //     }
-        // }
-    
+    [JSInvokable("ShowBlazorDialog")]
+    public async Task ShowBlazorDialog (string dialogType)
+    {
+        switch (dialogType)
+        {
+            case "LedControl":
+                // Dialog 열기
+                await DialogService.ShowAsync<AddNoteDialog>("MemoList");
+                break;
+            case "WaterControl":
+                await DialogService.ShowAsync<AddNoteDialog>("MemoList");
+                break;
+            case "AirControl":
+                await DialogService.ShowAsync<AddNoteDialog>("MemoList");
+                break;
+            case "MemoList":
+                await DialogService.ShowAsync<AddNoteDialog>("MemoList");
+                break;
+            default:
+                Console.WriteLine("Unknown dialog type: " + dialogType);
+                break;
+        }
+    }
+
 
 
     // Led Control Dialog 열기 - 기존 코드 활용
-    // private async Task OpenLedControlDialog (Device device)
-    // {
-    //     // MqttTopics를 문자열로 변환하여 DialogParameters에 전달하는 방법
-    //     var topicsAsString = string.Join(", ", device.MqttTopics.SelectMany(kvp => kvp.Value));
+    private async Task OpenLedControlDialog (Device device)
+    {
+        // MqttTopics를 문자열로 변환하여 DialogParameters에 전달하는 방법
+        var topicsAsString = string.Join(", ", device.MqttTopics.SelectMany(kvp => kvp.Value));
 
-    //     var parameters = new DialogParameters
-    // {
-    //     { "MqttAddress", device.MqttServer },
-    //     { "IpAddress", device.Address },
-    //     { "MqttPort", int.Parse(device.MqttPort) },
-    //     { "MqttTopics", topicsAsString }  // MqttTopics를 처리하여 전달
-    // };
+        var parameters = new DialogParameters
+        {
+            { "MqttAddress", device.MqttServer },
+            { "IpAddress", device.Address },
+            { "MqttPort", int.Parse(device.MqttPort) },
+            { "MqttTopics", topicsAsString }  // MqttTopics를 처리하여 전달
+        };
 
-    //     var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
-    //     await DialogService.ShowAsync<LedControlComponent>("LED Control", parameters, options);
-    // }
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<LedControlComponent>("LED Control", parameters, options);
+    }
 
     private async Task ResizeUnity (ChangeEventArgs e)
     {
