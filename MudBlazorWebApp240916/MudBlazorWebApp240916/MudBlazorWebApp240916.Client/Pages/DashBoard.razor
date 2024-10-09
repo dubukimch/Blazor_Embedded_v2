@@ -2,27 +2,28 @@
 @using MudBlazor
 @using MudBlazorWebApp240916.Shared.DataModel
 @inject IDialogService DialogService
-@using MudBlazorWebApp240916.Client.Pages 
+@using MudBlazorWebApp240916.Client.Pages
+@using MudBlazor.Components.Chart.Models
 
 <MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
     <MudGrid>
         <MudItem xs="12" sm="6" md="4">
             <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <MudText Typo="Typo.h6">Temperature</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.Lightbulb" Color="Color.Tertiary" OnClick="() => OpenNoteDialog()" />
+                    <MudText Typo="Typo.h6">Illuminance</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Lightbulb" Color="Color.Tertiary" OnClick="() => OpenIlluminanceControlDialog()" />
                 </div>
-                <MudChart ChartType="ChartType.Line" ChartSeries="@TemperatureSeries" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
+                <MudChart ChartType="ChartType.Line" ChartSeries="@IlluminanceSeries" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
             </MudPaper>
         </MudItem>
 
         <MudItem xs="12" sm="6" md="4">
             <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <MudText Typo="Typo.h6">Humidity</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.Thermostat" Color="Color.Secondary" OnClick="() => OpenNoteDialog()" />
+                    <MudText Typo="Typo.h6">Temperature and Humidity</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Thermostat" Color="Color.Secondary" OnClick="() => OpenTemperatureAndHumidityDialog()" />
                 </div>
-                <MudChart ChartType="ChartType.Line" ChartSeries="@HumiditySeries" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
+                <MudChart ChartType="ChartType.Line" ChartSeries="@TemperatureAndHumiditySeries" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
             </MudPaper>
         </MudItem>
 
@@ -30,20 +31,17 @@
             <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <MudText Typo="Typo.h6">Soil Moisture</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.WaterDrop" Color="Color.Info" OnClick="() => OpenNoteDialog()" />
-                    @* <MudButton Variant="Variant.Outlined" Color="Color.Info" Style="border-color: white;" OnClick="() => OpenNoteDialog()" Class="custom-hover-button">
-                        <MudIcon Icon="@Icons.Material.Filled.WaterDrop" />
-                    </MudButton> *@
-
+                    <MudIconButton Icon="@Icons.Material.Filled.WaterDrop" Color="Color.Info" OnClick="() => OpenSoilMoistureDialog()" />
                     <style>
                         .custom-hover-button:hover {
-                            background-color: green; /* 마우스를 가져다 댔을 때 초록색으로 */
-                            border-color: green; /* 테두리도 초록색으로 변경 */
-                            color: white; /* 텍스트 색상 변경 (선택사항) */
+                            background-color: green;
+                            border-color: green;
+                            color: white;
                         }
                     </style>
                 </div>
-                <MudChart ChartType="ChartType.Bar" ChartSeries="@SoilMoistureSeries" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
+                <!-- Soil Moisture Time Series 차트 -->
+                <MudTimeSeriesChart ChartSeries="@SoilMoistureSeries" @bind-SelectedIndex="SelectedSoilMoistureIndex" Width="100%" Height="350px" ChartOptions="@SoilMoistureOptions" CanHideSeries TimeLabelSpacing="TimeSpan.FromMinutes(5)" />
             </MudPaper>
         </MudItem>
 
@@ -51,9 +49,14 @@
             <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <MudText Typo="Typo.h6">CO2 Levels</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.WindPower" Color="Color.Primary" OnClick="() => OpenNoteDialog()" />
+                    <MudIconButton Icon="@Icons.Material.Filled.WindPower" Color="Color.Primary" OnClick="() => OpenAirQualityDialog()" />
                 </div>
-                <MudChart ChartType="ChartType.Line" ChartSeries="@CO2Series" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
+
+                <!-- CO2 Pie 차트 -->
+                <MudChart ChartType="ChartType.Pie"
+                          InputData="@CO2PieData"
+                          InputLabels="@CO2Labels"
+                          Width="100%" Height="350px" />
             </MudPaper>
         </MudItem>
 
@@ -72,7 +75,7 @@
                     <MudList T="Note">
                         @foreach (var note in Notes)
                         {
-                            <MudListItem>
+                            <MudListItem OnClick="() => OpenViewEditNoteDialog(note)">
                                 <MudText Typo="Typo.body1">@note.Title (@note.Date.ToString("d"))</MudText>
                             </MudListItem>
                         }
@@ -88,95 +91,93 @@
 @code {
     public string[] XAxisLabels = { "1 PM", "2 PM", "3 PM", "4 PM", "5 PM" };
 
-    public List<ChartSeries> TemperatureSeries { get; set; } = new List<ChartSeries>
+    // 조도 센서 시리즈 (Illuminance)
+    public List<ChartSeries> IlluminanceSeries { get; set; } = new List<ChartSeries>
     {
         new ChartSeries
         {
-            Name = "Temperature1 (°C)",
+            Name = "Illuminance1 (lux)",
+            Data = new double[] { 1000, 1200, 1100, 1300, 1250 }
+        },
+        new ChartSeries
+        {
+            Name = "Illuminance2 (lux)",
+            Data = new double[] { 1050, 1150, 1180, 1290, 1300 }
+        },
+        new ChartSeries
+        {
+            Name = "Illuminance3 (lux)",
+            Data = new double[] { 950, 1100, 1150, 1250, 1280 }
+        },
+        new ChartSeries
+        {
+            Name = "Illuminance4 (lux)",
+            Data = new double[] { 1020, 1180, 1110, 1340, 1320 }
+        }
+    };
+
+    // 온도 및 습도 시리즈 (Temperature and Humidity)
+    public List<ChartSeries> TemperatureAndHumiditySeries { get; set; } = new List<ChartSeries>
+    {
+        new ChartSeries
+        {
+            Name = "Temperature (°C)",
             Data = new double[] { 24, 25, 23, 26, 24 }
         },
         new ChartSeries
         {
-            Name = "Temperature2 (°C)",
-            Data = new double[] { 25, 26, 25, 23, 25 }
-        },
-        new ChartSeries
-        {
-            Name = "Temperature3 (°C)",
-            Data = new double[] { 27, 28, 29, 24, 23 }
-        },
-        new ChartSeries
-        {
-            Name = "Temperature4 (°C)",
-            Data = new double[] { 22, 29, 26, 29, 30 }
-        }
-
-    };
-
-    public List<ChartSeries> HumiditySeries { get; set; } = new List<ChartSeries>
-    {
-        new ChartSeries
-        {
-            Name = "Humidity1 (%)",
+            Name = "Humidity (%)",
             Data = new double[] { 45, 50, 47, 49, 52 }
-        },
-        new ChartSeries
-        {
-            Name = "Humidity2 (%)",
-            Data = new double[] { 35, 40, 37, 29, 12 }
-        },
-        new ChartSeries
-        {
-            Name = "Humidity3 (%)",
-            Data = new double[] { 55, 20, 37, 69, 72 }
-        },
-        new ChartSeries
-        {
-            Name = "Humidity4 (%)",
-            Data = new double[] { 15, 20, 47, 59, 12 }
-        }
-
-
-    };
-
-    public List<ChartSeries> SoilMoistureSeries { get; set; } = new List<ChartSeries>
-    {
-        new ChartSeries
-        {
-            Name = "Soil Moisture1 (%)",
-            Data = new double[] { 30, 35, 32, 33, 34 },
-        },
-        new ChartSeries
-        {
-            Name = "Soil Moisture2 (%)",
-            Data = new double[] { 20, 15, 42, 23, 54 },
-        },
-        new ChartSeries
-        {
-            Name = "Soil Moisture3 (%)",
-            Data = new double[] { 20, 15, 32, 23, 39 },
         }
     };
 
-    public List<ChartSeries> CO2Series { get; set; } = new List<ChartSeries>
-    {
-        new ChartSeries
-        {
-            Name = "CO2 (ppm) 1",
-            Data = new double[] { 400, 420, 410, 405, 415 },
-        },
-        new ChartSeries
-        {
-            Name = "CO2 (ppm) 2",
-            Data = new double[] { 300, 320, 310, 305, 315 },
-        },
-                new ChartSeries
-        {
-            Name = "CO2 (ppm) 3",
-            Data = new double[] { 280, 520, 210, 350, 395 },
-        },
+    // Soil Moisture Time Series 데이터
+    public List<MudBlazor.Components.Chart.Models.TimeSeriesChartSeries> SoilMoistureSeries { get; set; } = new List<MudBlazor.Components.Chart.Models.TimeSeriesChartSeries>();
+    private int SelectedSoilMoistureIndex = -1;
 
-    };
+    public ChartOptions SoilMoistureOptions { get; set; } = new ChartOptions
+        {
+            YAxisLines = true,
+            YAxisTicks = 500,
+            MaxNumYAxisTicks = 10,
+            YAxisRequireZeroPoint = true,
+            XAxisLines = true,
+            LineStrokeWidth = 2,
+        };
+
+    protected override void OnInitialized ()
+    {
+        var now = DateTime.Now;
+
+        // 분 단위로 X축 데이터 생성
+        var chart1 = new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries
+            {
+                Index = 0,
+                Name = "Soil Moisture Sensor 1",
+                Data = Enumerable.Range(-90, 60).Select(x => new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries.TimeValue(now.AddSeconds(x * 30), new Random().Next(6000, 15000))).ToList(),
+                IsVisible = true,
+                Type = MudBlazor.Components.Chart.Models.TimeSeriesDiplayType.Line
+            };
+
+        var chart2 = new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries
+            {
+                Index = 1,
+                Name = "Soil Moisture Sensor 2",
+                Data = Enumerable.Range(-90, 60).Select(x => new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries.TimeValue(now.AddSeconds(x * 30), new Random().Next(4000, 10000))).ToList(),
+                IsVisible = true,
+                Type = MudBlazor.Components.Chart.Models.TimeSeriesDiplayType.Line
+            };
+
+        SoilMoistureSeries.Add(chart1);
+        SoilMoistureSeries.Add(chart2);
+
+        StateHasChanged();
+    }
+
+    // CO2 Pie 차트 레이블 및 데이터
+    public string[] CO2Labels = { "CO2 1", "CO2 2","CO2 3", "CO2 4","CO2 5", "CO2 6", "ETC" }; // Pie 차트 레이블
+
+    public double[] CO2PieData = { 400, 320, 210, 300, 220, 510, 55 }; // Pie 차트 데이터
 
     private List<Note> Notes { get; set; } = new List<Note>();
 
@@ -193,4 +194,87 @@
             Notes.Add(note); // 메모 추가
         }
     }
+    private async Task OpenViewEditNoteDialog (Note note)
+    {
+        var parameters = new DialogParameters { ["CurrentNote"] = note };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+        var dialog = DialogService.Show<ViewEditNoteDialog>("View/Edit Note", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is Note updatedNote)
+        {
+            // 노트 수정
+            var noteToUpdate = Notes.FirstOrDefault(n => n == note);
+            if (noteToUpdate != null)
+            {
+                noteToUpdate.Title = updatedNote.Title;
+                noteToUpdate.Content = updatedNote.Content;
+                noteToUpdate.Date = updatedNote.Date;
+            }
+        }
+    }
+    private async Task OpenSoilMoistureDialog ()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+
+        var dialog = DialogService.Show<SoilMoistureComponent>("Soil Moisture Control", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            Console.WriteLine("Soil Moisture Dialog Closed");
+        }
+    }
+    private async Task OpenAirQualityDialog ()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+
+        var dialog = DialogService.Show<AirQualityComponent>("Air Quality Control", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            Console.WriteLine("Air Quality Dialog Closed");
+        }
+    }
+    private async Task OpenTemperatureAndHumidityDialog ()
+    {
+        var parameters = new DialogParameters
+    {
+        { "TemperatureAndHumiditySeries", TemperatureAndHumiditySeries },
+        { "XAxisLabels", XAxisLabels }
+    };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+
+        var dialog = DialogService.Show<TemperatureAndHumidityComponent>("Temperature And Humidity Control", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            Console.WriteLine("Temperature And Humidity Dialog Closed");
+        }
+    }
+    private async Task OpenIlluminanceControlDialog ()
+    {
+        var parameters = new DialogParameters
+    {
+        { "IlluminanceSeries", IlluminanceSeries },
+        { "XAxisLabels", XAxisLabels }
+    };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+
+        var dialog = DialogService.Show<IlluminanceControlComponent>("Illuminance Control", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            Console.WriteLine("Illuminance Control Dialog Closed");
+        }
+    }
+
 }

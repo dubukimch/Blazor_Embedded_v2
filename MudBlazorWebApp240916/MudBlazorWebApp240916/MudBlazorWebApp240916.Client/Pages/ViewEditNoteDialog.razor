@@ -1,0 +1,54 @@
+﻿@page "/view-edit-note"
+@using MudBlazor
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    // 기존 노트 데이터를 받아서 수정 가능하게 설정
+    [Parameter] public Note CurrentNote { get; set; }
+
+    private string Title { get; set; }
+    private string Content { get; set; }
+    private DateTime? SelectedDate { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // 초기화 시 기존 노트 데이터로 설정
+        if (CurrentNote != null)
+        {
+            Title = CurrentNote.Title;
+            Content = CurrentNote.Content;
+            SelectedDate = CurrentNote.Date;
+        }
+    }
+
+    private void Submit()
+    {
+        if (!string.IsNullOrWhiteSpace(Title) && SelectedDate.HasValue)
+        {
+            // 수정된 노트 데이터를 반환
+            var updatedNote = new Note
+            {
+                Title = Title,
+                Content = Content,
+                Date = SelectedDate.Value
+            };
+            MudDialog.Close(DialogResult.Ok(updatedNote));
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}
+
+<DialogContent>
+    <MudTextField @bind-Value="Title" Label="Title" Required="true" />
+    <MudTextField @bind-Value="Content" Label="Content" Required="false" />
+    <MudDatePicker @bind-Date="SelectedDate" Label="Select Date" />
+</DialogContent>
+
+<DialogActions>
+    <MudButton Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+    <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+</DialogActions>

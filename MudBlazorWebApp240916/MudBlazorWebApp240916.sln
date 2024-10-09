@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MudBlazorWebApp240916", "Mu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MudBlazorWebApp240916.Client", "MudBlazorWebApp240916\MudBlazorWebApp240916.Client\MudBlazorWebApp240916.Client.csproj", "{06EB623B-7289-4E70-924F-2373EB97094A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MudBlazorWebApp240916.Shared", "MudBlazorWebApp240916\MudBlazorWebApp240916.Shared\MudBlazorWebApp240916.Shared.csproj", "{97880CAE-22F3-401C-B376-EF657375F8BE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MudBlazorWebApp240916.Shared", "ClassLibrary1\MudBlazorWebApp240916.Shared.csproj", "{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,18 +43,18 @@ Global
 		{06EB623B-7289-4E70-924F-2373EB97094A}.Release|arm64.Build.0 = Release|Any CPU
 		{06EB623B-7289-4E70-924F-2373EB97094A}.Release|x86.ActiveCfg = Release|Any CPU
 		{06EB623B-7289-4E70-924F-2373EB97094A}.Release|x86.Build.0 = Release|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Debug|arm64.ActiveCfg = Debug|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Debug|arm64.Build.0 = Debug|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Debug|x86.Build.0 = Debug|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Release|arm64.ActiveCfg = Release|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Release|arm64.Build.0 = Release|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Release|x86.ActiveCfg = Release|Any CPU
-		{97880CAE-22F3-401C-B376-EF657375F8BE}.Release|x86.Build.0 = Release|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Debug|arm64.ActiveCfg = Debug|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Debug|arm64.Build.0 = Debug|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Debug|x86.Build.0 = Debug|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Release|arm64.ActiveCfg = Release|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Release|arm64.Build.0 = Release|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Release|x86.ActiveCfg = Release|Any CPU
+		{B1467F30-3D2E-45CB-A5FE-8E77DAE69957}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

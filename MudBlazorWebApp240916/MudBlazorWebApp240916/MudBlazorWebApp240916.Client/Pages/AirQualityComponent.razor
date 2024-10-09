@@ -1,0 +1,53 @@
+﻿@inject MqttService MqttService
+@inject IJSRuntime JSRuntime
+
+<MudDialog Class="custom-dialog">
+    <DialogContent>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+            <MudText Typo="Typo.h6">Air Quality Control</MudText>
+
+            <!-- Ventilation icon button -->
+            <MudIconButton Icon="@VentilationIcon"
+                           Color="Color.Info"
+                           OnClick="ToggleVentilation" />
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <MudText Typo="Typo.subtitle1">Current CO2 Levels</MudText>
+
+            <!-- CO2 Pie Chart -->
+            <MudChart ChartType="ChartType.Pie"
+                      InputData="@CO2PieData"
+                      InputLabels="@CO2Labels"
+                      Width="100%" Height="350px" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    public bool IsVentilationOn { get; set; } = false;  // Initial state of the ventilation
+    private string VentilationIcon => IsVentilationOn ? Icons.Material.Filled.WindPower : Icons.Material.Filled.SensorWindow;  // Icon reflecting ventilation state
+
+    public string[] CO2Labels = { "CO2 1", "CO2 2", "CO2 3", "CO2 4", "CO2 5", "CO2 6", "ETC" };  // CO2 chart labels
+    public double[] CO2PieData = { 400, 320, 210, 300, 220, 510, 55 };  // CO2 chart data
+
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    private void Submit () => MudDialog.Close(DialogResult.Ok(true));
+
+    private void Cancel () => MudDialog.Cancel();
+
+    private void ToggleVentilation ()
+    {
+        IsVentilationOn = !IsVentilationOn;  // Toggle ventilation state
+
+        // Send MQTT message to start or stop ventilation
+        var message = IsVentilationOn ? "VENTILATION_ON" : "VENTILATION_OFF";
+        MqttService.PublishMessageAsync("air/ventilation", message);
+    }
+}
