@@ -1,0 +1,51 @@
+﻿@inject IDialogService DialogService
+
+<MudList T="Note">
+    @foreach (var note in Notes)
+    {
+        <MudListItem OnClick="() => OpenViewEditNoteDialog(note)">
+            <MudText Typo="Typo.body1">@note.Title (@note.Date.ToString("d"))</MudText>
+        </MudListItem>
+    }
+</MudList>
+
+<MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenAddNoteDialog" />
+
+@code {
+    private List<Note> Notes { get; set; } = new List<Note>();
+
+    private async Task OpenAddNoteDialog ()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+        var dialog = DialogService.Show<AddNoteDialog>("Add a new Note", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is Note newNote)
+        {
+            Notes.Add(newNote);  // 새로운 노트를 리스트에 추가
+        }
+    }
+
+    private async Task OpenViewEditNoteDialog (Note note)
+    {
+        var parameters = new DialogParameters { ["CurrentNote"] = note };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+        var dialog = DialogService.Show<ViewEditNoteDialog>("View/Edit Note", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is Note updatedNote)
+        {
+            // 노트를 업데이트
+            var noteToUpdate = Notes.FirstOrDefault(n => n == note);
+            if (noteToUpdate != null)
+            {
+                noteToUpdate.Title = updatedNote.Title;
+                noteToUpdate.Content = updatedNote.Content;
+                noteToUpdate.Date = updatedNote.Date;
+            }
+        }
+    }
+}

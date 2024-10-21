@@ -1,0 +1,114 @@
+@inject MqttService MqttService
+@inject IJSRuntime JSRuntime
+
+<MudDialog Class="custom-dialog">
+    <DialogContent>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+            <MudText Typo="Typo.h6">Soil Moisture Control</MudText>
+
+            <!-- Water icon button -->
+            <MudIconButton Icon="@WaterIcon"
+                           Color="Color.Info"
+                           OnClick="ToggleWaterIcon" />
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <MudText Typo="Typo.subtitle1">Current Soil Moisture Level</MudText>
+
+            <!-- Slider for soil moisture level -->
+            <MudSlider @bind-Value="SoilMoistureLevel"
+                       Min="0" Max="100"
+                       Step="1"
+                       ValueLabelFormat="{0}%"
+                       Color="Color.Primary"
+                       Label="Soil Moisture Level"
+                       OnValueChanged="OnSliderValueChanged" />
+
+            <!-- Display the slider value -->
+            <MudText Typo="Typo.subtitle1">Slider Value: @SoilMoistureLevel%</MudText>
+        </div>
+
+        <!-- Time series chart for soil moisture -->
+        <MudTimeSeriesChart ChartSeries="@SoilMoistureSeries"
+                            Width="100%" Height="350px"
+                            ChartOptions="@SoilMoistureOptions"
+                            CanHideSeries TimeLabelSpacing="TimeSpan.FromMinutes(5)" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    public int SoilMoistureLevel { get; set; } = 30;
+    private bool IsWaterOn { get; set; } = true;
+    private string WaterIcon => IsWaterOn ? Icons.Material.Filled.Water : Icons.Material.Filled.WaterDamage;
+
+    public List<MudBlazor.Components.Chart.Models.TimeSeriesChartSeries> SoilMoistureSeries { get; set; } = new List<MudBlazor.Components.Chart.Models.TimeSeriesChartSeries>();
+    public ChartOptions SoilMoistureOptions { get; set; } = new ChartOptions
+        {
+            YAxisLines = true,
+            YAxisTicks = 500,
+            MaxNumYAxisTicks = 10,
+            YAxisRequireZeroPoint = true,
+            XAxisLines = true,
+            LineStrokeWidth = 2
+        };
+
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    protected override void OnInitialized ()
+    {
+        var now = DateTime.Now;
+        var chart1 = new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries
+            {
+                Index = 0,
+                Name = "Soil Moisture Sensor 1",
+                Data = Enumerable.Range(-90, 60).Select(x => new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries.TimeValue(now.AddSeconds(x * 30), new Random().Next(6000, 15000))).ToList(),
+                IsVisible = true,
+                Type = MudBlazor.Components.Chart.Models.TimeSeriesDiplayType.Line
+            };
+        var chart2 = new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries
+            {
+                Index = 1,
+                Name = "Soil Moisture Sensor 2",
+                Data = Enumerable.Range(-90, 60).Select(x => new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries.TimeValue(now.AddSeconds(x * 30), new Random().Next(4000, 10000))).ToList(),
+                IsVisible = true,
+                Type = MudBlazor.Components.Chart.Models.TimeSeriesDiplayType.Line
+            };
+
+        SoilMoistureSeries.Add(chart1);
+        SoilMoistureSeries.Add(chart2);
+        StateHasChanged();
+
+    }
+
+    private void Submit () => MudDialog.Close(DialogResult.Ok(true));
+    private void Cancel () => MudDialog.Cancel();
+    private void ToggleWaterIcon () => IsWaterOn = !IsWaterOn;
+
+    private void OnSliderValueChanged (double newValue)
+    {
+        SoilMoistureLevel = (int)newValue;
+        CheckSoilMoistureLevels();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void CheckSoilMoistureLevels ()
+    {
+        foreach (var series in SoilMoistureSeries)
+        {
+            foreach (var dataPoint in series.Data)
+            {
+                if (dataPoint.Value > SoilMoistureLevel)
+                {
+                    MqttService.PublishMessageAsync("soil/moisture", "WATER_ON");
+                    return;
+                }
+            }
+        }
+        MqttService.PublishMessageAsync("soil/moisture", "WATER_OFF");
+    }
+}
