@@ -26,7 +26,14 @@
     </select>
 }
 
-<canvas id="myChart" width="600" height="400"></canvas>
+@if (chartType == "map")
+{
+    <div id="myMap" style="height: 500px;"></div> <!-- Leaflet 맵을 위한 div -->
+}
+else
+{
+    <canvas id="myChart" width="600" height="400"></canvas> <!-- 일반 차트를 위한 canvas -->
+}
 
 @code {
     private string selectedDataFile;
@@ -38,7 +45,7 @@
 
     // 모든 차트 유형 목록
     private List<string> allChartTypes = new List<string> {
-        "bar", "stackedBar", "barHorizontal", "line", "pie", "doughnut", "radar", "polarArea", "bubble", "scatter"
+        "bar", "stackedBar", "barHorizontal", "line", "pie", "doughnut", "radar", "polarArea", "bubble", "scatter", "map"
     };
 
     protected override async Task OnInitializedAsync ()
@@ -50,6 +57,7 @@
     private async Task OnDataFileChange (ChangeEventArgs e)
     {
         selectedDataFile = e.Value.ToString();
+        chartType = ""; // 데이터가 변경되면 차트 유형 초기화
         await LoadChartData();
     }
 
@@ -61,7 +69,7 @@
         var jsonData = await httpClient.GetStringAsync($"data/{selectedDataFile}");
         chartData = System.Text.Json.JsonSerializer.Deserialize<ChartData>(jsonData);
 
-        UpdateAvailableChartTypes(); // 데이터를 기반으로 차트 유형 업데이트
+        UpdateAvailableChartTypes(); // 데이터를 기반으로 차트 유형 활성화/비활성화 업데이트
         shouldRenderChart = false;
     }
 
@@ -69,9 +77,10 @@
     {
         availableChartTypes.Clear();
 
-        // 두 가지 데이터 형식에 맞춰 차트 유형 활성화
-        bool isMultiDataset = chartData.Data != null && chartData.Data.Count > 0;
-        bool isSingleYAxis = chartData.YAxis != null && chartData.YAxis.Count > 0;
+        // 데이터 형식에 따라 차트 유형 활성화 여부 결정
+        bool hasXAxis = chartData.XAxis != null && chartData.XAxis.Count > 0;
+        bool hasMultipleDatasets = chartData.Data != null && chartData.Data.Count > 0;
+        bool hasYAxis = chartData.YAxis != null && chartData.YAxis.Count > 0;
 
         foreach (var chart in allChartTypes)
         {
@@ -79,30 +88,33 @@
             {
                 case "bar":
                 case "stackedBar":
-                    availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
-                    break;
-
                 case "barHorizontal":
-                    availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
-                    break;
-
                 case "line":
-                    availableChartTypes[chart] = (isMultiDataset && chartData.XAxis.Count >= 2) || (isSingleYAxis && chartData.XAxis.Count >= 2);
+                    // XAxis와 YAxis 또는 다중 데이터셋이 있는 경우 활성화
+                    availableChartTypes[chart] = hasXAxis && (hasYAxis || hasMultipleDatasets);
                     break;
 
                 case "pie":
                 case "doughnut":
-                    availableChartTypes[chart] = isSingleYAxis || (isMultiDataset && chartData.Data.Count == 1);
+                    // YAxis 또는 데이터셋이 있는 경우 활성화
+                    availableChartTypes[chart] = hasYAxis || hasMultipleDatasets;
                     break;
 
                 case "radar":
                 case "polarArea":
-                    availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
+                    // 다중 데이터셋이 있는 경우 활성화
+                    availableChartTypes[chart] = hasMultipleDatasets;
                     break;
 
-                case "bubble":
                 case "scatter":
-                    availableChartTypes[chart] = isMultiDataset || isSingleYAxis;
+                case "bubble":
+                    // 각 데이터셋이 x, y 값을 포함해야 함
+                    availableChartTypes[chart] = hasMultipleDatasets && chartData.Data.All(d => d.data.All(value => value is double));
+                    break;
+
+                case "map":
+                    // 지역 정보가 있을 때 활성화
+                    availableChartTypes[chart] = chartData.Regions != null && chartData.Regions.Count > 0;
                     break;
 
                 default:
@@ -111,65 +123,66 @@
             }
         }
 
+        // 차트 유형이 비활성화되면 차트 초기화
         if (!availableChartTypes.ContainsKey(chartType) || !availableChartTypes[chartType])
         {
             chartType = "";
         }
     }
-
     private async Task OnChartTypeChange (ChangeEventArgs e)
     {
         chartType = e.Value.ToString();
 
         if (!string.IsNullOrEmpty(chartType) && availableChartTypes[chartType])
         {
-            await RenderChart();
+            shouldRenderChart = true;
         }
     }
 
-    private async Task RenderChart ()
+    protected override async Task OnAfterRenderAsync (bool firstRender)
     {
-        if (chartData != null && !string.IsNullOrEmpty(chartType))
+        if (shouldRenderChart && !string.IsNullOrEmpty(chartType))
         {
-            // 단일 YAxis 또는 다중 데이터셋 처리
-            List<ChartDataset> datasets;
-
-            if (chartData.YAxis != null && chartData.YAxis.Count > 0)
+            if (chartType == "map")
             {
-                // 단일 데이터셋 처리 (YAxis)
-                datasets = new List<ChartDataset>
-                {
-                    new ChartDataset
-                    {
-                        label = "데이터셋",
-                        data = chartData.YAxis
-                    }
-                };
+                await JS.InvokeVoidAsync("renderMap", $"data/{selectedDataFile}");
             }
             else
             {
-                // 다중 데이터셋 처리
-                datasets = chartData.Data.Select(d => new ChartDataset
-                    {
-                        label = d.label,
-                        data = d.data
-                    }).ToList();
+                if (chartData.Data != null && chartData.Data.Count > 0)
+                {
+                    var datasets = chartData.Data.Select(d => new { label = d.label, data = d.data }).ToList();
+                    await JS.InvokeVoidAsync("renderChart", chartType, chartData.XAxis, datasets);
+                }
+                else if (chartData.YAxis != null && chartData.XAxis != null)
+                {
+                    var dataset = new { label = "데이터셋", data = chartData.YAxis };
+                    await JS.InvokeVoidAsync("renderChart", chartType, chartData.XAxis, new[] { dataset });
+                }
             }
-
-            await JS.InvokeVoidAsync("renderChart", chartType, chartData.XAxis, datasets);
+            shouldRenderChart = false;
         }
     }
 
     public class ChartData
     {
         public List<string> XAxis { get; set; } = new List<string>();
-        public List<double> YAxis { get; set; } = new List<double>(); // YAxis가 있는 경우
-        public List<ChartDataset> Data { get; set; } = new List<ChartDataset>(); // 다중 데이터셋이 있는 경우
+        public List<double> YAxis { get; set; } = new List<double>();
+        public List<ChartDataset> Data { get; set; } = new List<ChartDataset>();
+        public List<RegionData> Regions { get; set; } = new List<RegionData>(); // 지역 정보
     }
 
     public class ChartDataset
     {
         public string label { get; set; } = "";
         public List<double> data { get; set; } = new List<double>();
+    }
+
+    public class RegionData
+    {
+        public string name { get; set; }
+        public double lat { get; set; }
+        public double lng { get; set; }
+        public double value { get; set; }
     }
 }

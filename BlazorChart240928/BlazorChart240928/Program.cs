@@ -10,7 +10,7 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddHttpClient("default", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5000"); // ±âº» ¼­¹ö ÁÖ¼Ò·Î ¼öÁ¤ÇÏ¼¼¿ä.
+    client.BaseAddress = new Uri("http://localhost:5000"); // ï¿½âº» ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¼Ò·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï¼ï¿½ï¿½ï¿½.
 });
 
 var app = builder.Build();
@@ -23,15 +23,14 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
-
+//app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
-// ³ª¸ÓÁö ¼³Á¤...
-app.MapControllers(); // ÄÁÆ®·Ñ·¯ ¸ÅÇÎ Ãß°¡ (ÆÄÀÏ ¸ñ·Ï API°¡ ÄÁÆ®·Ñ·¯¿¡ ÀÖ±â ¶§¹®¿¡ ÇÊ¿ä)
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½...
+app.MapControllers(); // ï¿½ï¿½Æ®ï¿½Ñ·ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ APIï¿½ï¿½ ï¿½ï¿½Æ®ï¿½Ñ·ï¿½ï¿½ï¿½ ï¿½Ö±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½)
 
 app.Run();

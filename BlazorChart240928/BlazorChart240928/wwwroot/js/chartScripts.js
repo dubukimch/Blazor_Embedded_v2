@@ -9,10 +9,10 @@
         type: chartType === 'stackedBar' || chartType === 'barHorizontal' ? 'bar' : chartType,
         data: {
             labels: xAxis,
-            datasets: datasets.map(d => ({
+            datasets: datasets.map((d, i) => ({
                 label: d.label,
                 data: d.data,
-                backgroundColor: getRandomColor() + '33',
+                backgroundColor: getRandomColor() + '80',
                 borderColor: getRandomColor(),
                 borderWidth: 1
             }))
@@ -20,11 +20,11 @@
         options: {
             scales: {
                 x: {
-                    stacked: chartType === 'stackedBar'
+                    stacked: chartType === 'stackedBar' // 누적 막대 활성화
                 },
                 y: {
                     beginAtZero: true,
-                    stacked: chartType === 'stackedBar'
+                    stacked: chartType === 'stackedBar' // 누적 막대 Y축 활성화
                 }
             },
             responsive: true,
@@ -48,6 +48,7 @@
 
     window.myChart = new Chart(ctx, chartConfig);
 }
+
 
 function getRandomColor() {
     var letters = '0123456789ABCDEF';
