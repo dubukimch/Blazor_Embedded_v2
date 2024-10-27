@@ -11,4 +11,6 @@
 #### 사용 언어: C#
 #### 개발 기간: 2024/ 07 / 22 ~ 2024/ 10 / 13
 #### 영상 링크: 제작 중
+![KakaoTalk_20241013_185420229](https://github.com/user-attachments/assets/65a92a16-5483-48c7-ac3e-2b029f5a658e)
+
 #### 기술서 링크: https://drive.google.com/file/d/1WxXUVBkOudEOaz4OenZ5eVOrjtkNWJJL/view?usp=sharing
