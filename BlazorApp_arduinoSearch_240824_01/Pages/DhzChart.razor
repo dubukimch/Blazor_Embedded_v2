@@ -1,4 +1,4 @@
-@page "/soilMoistureChart"
+@page "/DHZChart"
 @implements IAsyncDisposable
 @using System.Text.Json
 @using System.Text.Json.Serialization
@@ -6,9 +6,9 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 
-<PageTitle>Soil Moisture Chart</PageTitle>
+<PageTitle>DHZ Chart</PageTitle>
 
-<h3>Soil Moisture Sensor</h3>
+<h3>DHZ Sensor</h3>
 
 @if (!string.IsNullOrWhiteSpace(errorMessage))
 {
@@ -20,14 +20,12 @@
     <p class="text-muted">@statusMessage</p>
 }
 
-<canvas id="soilTemperatureChart" width="400" height="200"></canvas>
-<canvas id="soilHumidityChart" width="400" height="200"></canvas>
-<canvas id="soilMoistureChart" width="400" height="200"></canvas>
+<canvas id="dhzTemperatureChart" width="400" height="200"></canvas>
+<canvas id="dhzHumidityChart" width="400" height="200"></canvas>
 
 @code {
     private readonly List<float> temperatureData = new();
     private readonly List<float> humidityData = new();
-    private readonly List<int> soilMoistureData = new();
     private IJSObjectReference? chartModule;
     private string mqttAddress = string.Empty;
     private int mqttPort;
@@ -63,7 +61,7 @@
         try
         {
             chartModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/sensorChart.js");
-            await chartModule.InvokeVoidAsync("initializeSoilMoistureCharts");
+            await chartModule.InvokeVoidAsync("initializeDhzCharts");
             await UpdateCharts();
         }
         catch (Exception ex)
@@ -108,7 +106,7 @@
         {
             try
             {
-                var sensorData = JsonSerializer.Deserialize<SensorData>(message);
+                var sensorData = JsonSerializer.Deserialize<DhzSensorData>(message);
 
                 if (sensorData == null)
                 {
@@ -117,7 +115,6 @@
 
                 temperatureData.Add(sensorData.Temperature);
                 humidityData.Add(sensorData.Humidity);
-                soilMoistureData.Add(sensorData.SoilMoisture);
                 TrimSeries();
 
                 statusMessage = $"Received message on {topic}.";
@@ -140,10 +137,9 @@
         }
 
         await chartModule.InvokeVoidAsync(
-            "updateSoilMoistureCharts",
+            "updateDhzCharts",
             temperatureData.ToArray(),
-            humidityData.ToArray(),
-            soilMoistureData.ToArray());
+            humidityData.ToArray());
     }
 
     private void TrimSeries()
@@ -155,7 +151,6 @@
 
         temperatureData.RemoveAt(0);
         humidityData.RemoveAt(0);
-        soilMoistureData.RemoveAt(0);
     }
 
     public async ValueTask DisposeAsync()
@@ -169,7 +164,7 @@
 
         try
         {
-            await chartModule.InvokeVoidAsync("disposeSoilMoistureCharts");
+            await chartModule.InvokeVoidAsync("disposeDhzCharts");
             await chartModule.DisposeAsync();
         }
         catch (JSDisconnectedException)
@@ -177,15 +172,12 @@
         }
     }
 
-    public class SensorData
+    public class DhzSensorData
     {
         [JsonPropertyName("temperature")]
         public float Temperature { get; set; }
 
         [JsonPropertyName("humidity")]
         public float Humidity { get; set; }
-
-        [JsonPropertyName("soil_moisture")]
-        public int SoilMoisture { get; set; }
     }
 }

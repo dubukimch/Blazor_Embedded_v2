@@ -1,93 +1,129 @@
-﻿using System.Net;
-using System.Net.Http;
+using System.Collections.Concurrent;
+using System.Net;
 using System.Net.NetworkInformation;
-using System.Threading.Tasks;
+using BlazorApp_arduinoSearch_240824_01.Configuration;
+using BlazorApp_arduinoSearch_240824_01.Models;
+using Microsoft.Extensions.Options;
+
+namespace BlazorApp_arduinoSearch_240824_01.Services;
 
 public class DeviceDiscoveryService
 {
     private readonly HttpClient _httpClient;
+    private readonly DeviceDiscoveryOptions _options;
     private readonly string _serverIpAddress;
 
-    public DeviceDiscoveryService (HttpClient httpClient)
+    public DeviceDiscoveryService(HttpClient httpClient, IOptions<DeviceDiscoveryOptions> options)
     {
         _httpClient = httpClient;
-
-        // 서버의 IP 주소 가져오기
+        _options = options.Value;
         _serverIpAddress = GetServerIpAddress();
     }
-    private string GetServerIpAddress ()
+
+    public async Task<List<Device>> DiscoverDevicesAsync(
+        IProgress<DeviceDiscoveryProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var candidates = GetCandidateIpAddresses();
+        var devices = new ConcurrentBag<Device>();
+        var scanned = 0;
+        var maxConcurrency = Math.Max(1, _options.MaxConcurrency);
+
+        progress?.Report(new DeviceDiscoveryProgress
+        {
+            Total = candidates.Count,
+            Scanned = 0,
+            Found = 0,
+            Message = "장비 검색을 시작합니다."
+        });
+
+        using var semaphore = new SemaphoreSlim(maxConcurrency);
+
+        var tasks = candidates.Select(async ipAddress =>
+        {
+            await semaphore.WaitAsync(cancellationToken);
+
+            try
+            {
+                if (await PingHost(ipAddress))
+                {
+                    var deviceInfo = await GetDeviceInfo(ipAddress, cancellationToken);
+
+                    if (deviceInfo != null)
+                    {
+                        devices.Add(deviceInfo);
+                    }
+                }
+            }
+            finally
+            {
+                var currentScanned = Interlocked.Increment(ref scanned);
+
+                progress?.Report(new DeviceDiscoveryProgress
+                {
+                    Total = candidates.Count,
+                    Scanned = currentScanned,
+                    Found = devices.Count,
+                    CurrentIpAddress = ipAddress,
+                    Message = $"{currentScanned}/{candidates.Count} 검색 완료"
+                });
+
+                semaphore.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks);
+
+        return devices
+            .OrderBy(device => device.Address)
+            .ToList();
+    }
+
+    internal IReadOnlyList<string> GetCandidateIpAddresses()
+    {
+        if (_options.StartHost > _options.EndHost)
+        {
+            return Array.Empty<string>();
+        }
+
+        var baseIp = _options.NormalizedBaseIpAddress;
+        var excludedAddresses = new HashSet<string>(_options.ExcludedAddresses, StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(_serverIpAddress))
+        {
+            excludedAddresses.Add(_serverIpAddress);
+        }
+
+        return Enumerable.Range(_options.StartHost, _options.EndHost - _options.StartHost + 1)
+            .Select(host => baseIp + host)
+            .Where(ipAddress => !excludedAddresses.Contains(ipAddress))
+            .ToList();
+    }
+
+    private static string GetServerIpAddress()
     {
         try
         {
             var host = Dns.GetHostName();
             var ipAddresses = Dns.GetHostAddresses(host);
-
-            // IPv4 주소만 반환
             var ipv4Address = ipAddresses.FirstOrDefault(ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-            return ipv4Address?.ToString() ?? "";
+
+            return ipv4Address?.ToString() ?? string.Empty;
         }
         catch
         {
-            return "";
+            return string.Empty;
         }
     }
 
-    public async Task<List<Device>> DiscoverDevicesAsync ()
-    {
-        var devices = new List<Device>();
-        var tasks = new List<Task>();
-
-        var baseIp = "172.30.1.";  // 네트워크의 기본 IP 범위
-
-        for (int i = 1; i <= 253; i++)
-        {
-            var ipAddress = baseIp + i;
-            if (ipAddress == _serverIpAddress || ipAddress == baseIp + "254")
-            {
-                continue; // 이 IP 주소는 검색 대상에서 제외
-            }
-            // 병렬로 Ping 및 장치 정보 검색 수행
-            tasks.Add(Task.Run(async () =>
-            {
-                if (await PingHost(ipAddress))
-                {
-                    var deviceInfo = await GetDeviceInfo(ipAddress);
-                    if (deviceInfo != null)
-                    {
-                        lock (devices)
-                        {
-                            devices.Add(deviceInfo);
-                        }
-                    }
-                    else
-                    {
-                        lock (devices)
-                        {
-                            devices.Add(new Device
-                            {
-                                Address = ipAddress,
-                                Description = $"Error: Unable to retrieve information from {ipAddress}"
-                            });
-                        }
-                    }
-                }
-            }));
-        }
-
-        await Task.WhenAll(tasks);
-
-        return devices;
-    }
-
-    private async Task<bool> PingHost (string ipAddress)
+    private async Task<bool> PingHost(string ipAddress)
     {
         try
         {
-            using (var ping = new Ping())
-            {
-                var reply = await ping.SendPingAsync(ipAddress, 1000); // 3초 대기 시간 제한
-                return reply.Status == IPStatus.Success;
-            }
+            using var ping = new Ping();
+            var reply = await ping.SendPingAsync(ipAddress, _options.PingTimeoutMilliseconds);
+
+            return reply.Status == IPStatus.Success;
         }
         catch
         {
@@ -95,48 +131,50 @@ public class DeviceDiscoveryService
         }
     }
 
-    private async Task<Device> GetDeviceInfo (string ipAddress)
+    private async Task<Device?> GetDeviceInfo(string ipAddress, CancellationToken cancellationToken)
     {
         try
         {
-            // HTTP 요청을 통해 장치 정보 가져오기
-            var response = await _httpClient.GetAsync($"http://{ipAddress}/device_info");
-            if (response.IsSuccessStatusCode)
+            using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutSource.CancelAfter(_options.HttpTimeoutMilliseconds);
+
+            var response = await _httpClient.GetAsync($"http://{ipAddress}/device_info", timeoutSource.Token);
+
+            if (!response.IsSuccessStatusCode)
             {
-                var device = await response.Content.ReadFromJsonAsync<Device>();
-                device.Address = ipAddress;
-                return device;
+                return CreateErrorDevice(ipAddress, $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
             }
+
+            var device = await response.Content.ReadFromJsonAsync<Device>(cancellationToken: timeoutSource.Token);
+
+            if (device == null)
+            {
+                return CreateErrorDevice(ipAddress, "Unable to deserialize device information.");
+            }
+
+            device.Address = ipAddress;
+            return device;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return CreateErrorDevice(ipAddress, $"Timeout after {_options.HttpTimeoutMilliseconds}ms.");
         }
         catch (HttpRequestException ex)
         {
-            // HTTP 요청 실패 시 예외 메시지를 장치 설명에 추가
-            return new Device
-            {
-                Address = ipAddress,
-                Description = $"Error: {ex.Message}"
-            };
+            return CreateErrorDevice(ipAddress, ex.Message);
         }
         catch (Exception ex)
         {
-            // 일반적인 예외 처리
-            return new Device
-            {
-                Address = ipAddress,
-                Description = $"Error: {ex.Message}"
-            };
+            return CreateErrorDevice(ipAddress, ex.Message);
         }
-
-        return null;
     }
-}
 
-public class Device
-{
-    public string Name { get; set; }
-    public string Address { get; set; }
-    public string Description { get; set; }
-    public string MqttServer { get; set; }
-    public string MqttPort { get; set; }
-    public string MqttTopic { get; set; }
+    private static Device CreateErrorDevice(string ipAddress, string message)
+    {
+        return new Device
+        {
+            Address = ipAddress,
+            Description = $"Error: {message}"
+        };
+    }
 }

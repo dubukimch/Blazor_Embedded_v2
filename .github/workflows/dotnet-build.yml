@@ -1,0 +1,36 @@
+name: dotnet-build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            8.0.x
+            10.0.x
+
+      - name: Restore server solution
+        run: dotnet restore BlazorApp_arduinoSearch_240824_01/BlazorApp_arduinoSearch_240824_01.sln
+
+      - name: Build server solution
+        run: dotnet build BlazorApp_arduinoSearch_240824_01/BlazorApp_arduinoSearch_240824_01.sln --configuration Release --no-restore
+
+      - name: Test server solution
+        run: dotnet test BlazorApp_arduinoSearch_240824_01/BlazorApp_arduinoSearch_240824_01.sln --configuration Release --no-build
+
+      - name: Restore WASM solution
+        run: dotnet restore BlazorApp3/BlazorApp3.sln
+
+      - name: Build WASM solution
+        run: dotnet build BlazorApp3/BlazorApp3.sln --configuration Release --no-restore

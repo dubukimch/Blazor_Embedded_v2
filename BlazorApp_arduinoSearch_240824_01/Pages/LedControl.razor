@@ -1,56 +1,109 @@
-﻿@page "/ledControl"
-@inject Services.MqttService MqttService
+@page "/ledControl"
+@implements IDisposable
+@inject MqttService MqttService
 @inject NavigationManager NavigationManager
 
+<PageTitle>LED Control</PageTitle>
 
-<h3>LedControl</h3> <!-- 컴포넌트 이름을 대문자로 시작 -->
+<h3>LED Control</h3>
 
-<button @onclick="TurnOn">Turn On</button>
-<button @onclick="TurnOff">Turn Off</button>
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <p class="text-danger">@errorMessage</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <p class="text-muted">@statusMessage</p>
+}
+
+<button class="btn btn-success me-2" disabled="@(!isReady)" @onclick="TurnOn">Turn On</button>
+<button class="btn btn-secondary" disabled="@(!isReady)" @onclick="TurnOff">Turn Off</button>
 
 @code {
-    private string mqttAddress;
+    private string mqttAddress = string.Empty;
     private int mqttPort;
-    private string mqttTopic;
+    private string mqttTopic = string.Empty;
+    private string statusMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isReady;
 
     protected override async Task OnInitializedAsync()
     {
-        // Subscribe to the MQTT messages from Arduino
-        MqttService.OnMessageReceived += (topic, message) =>
+        MqttService.OnMessageReceived += HandleMqttMessage;
+
+        if (!TryReadMqttQuery())
         {
-            Console.WriteLine($"Received message on topic {topic}: {message}");
-            // Optionally update the UI based on received messages
-        };
-        // Query String에서 MQTT 정보 가져오기
+            return;
+        }
+
+        isReady = await MqttService.ConnectAsync(mqttAddress, mqttPort, mqttTopic);
+        statusMessage = MqttService.LastStatus;
+
+        if (!isReady)
+        {
+            errorMessage = MqttService.LastError;
+        }
+    }
+
+    private bool TryReadMqttQuery()
+    {
         var uri = new Uri(NavigationManager.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
 
-        mqttAddress = query["mqttAddress"];
-        mqttPort = int.Parse(query["mqttPort"]);
-        mqttTopic = query["mqttTopic"];
+        mqttAddress = query["mqttAddress"] ?? string.Empty;
+        mqttTopic = query["mqttTopic"] ?? string.Empty;
 
-        await MqttService.ConnectAsync(mqttAddress, mqttPort,mqttTopic); // await 연산자 추가
+        if (string.IsNullOrWhiteSpace(mqttAddress))
+        {
+            errorMessage = "MQTT 서버 주소가 없습니다.";
+            return false;
+        }
+
+        if (!int.TryParse(query["mqttPort"], out mqttPort) || mqttPort is < 1 or > 65535)
+        {
+            errorMessage = "MQTT 포트가 올바르지 않습니다.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(mqttTopic))
+        {
+            errorMessage = "MQTT 토픽이 없습니다.";
+            return false;
+        }
+
+        return true;
     }
 
-    private async Task TurnOn()
+    private Task TurnOn()
     {
-        Console.WriteLine("home/led => ON");
-
-        await MqttService.PublishMessageAsync("home/led", "ON");
+        return PublishLedCommand("ON");
     }
 
-    private async Task TurnOff()
+    private Task TurnOff()
     {
-        Console.WriteLine("home/led => OFF");
+        return PublishLedCommand("OFF");
+    }
 
-        await MqttService.PublishMessageAsync("home/led", "OFF");
+    private async Task PublishLedCommand(string command)
+    {
+        var published = await MqttService.PublishMessageAsync(mqttTopic, command);
+        statusMessage = MqttService.LastStatus;
+
+        if (!published)
+        {
+            errorMessage = MqttService.LastError;
+        }
+    }
+
+    private void HandleMqttMessage(string topic, string message)
+    {
+        statusMessage = $"Received message on {topic}: {message}";
+        _ = InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
-        MqttService.OnMessageReceived -= (topic, message) =>
-        {
-            Console.WriteLine($"Received message on topic {topic}: {message}");
-        };
+        MqttService.OnMessageReceived -= HandleMqttMessage;
     }
 }

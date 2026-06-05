@@ -1,29 +1,24 @@
+using BlazorApp_arduinoSearch_240824_01.Configuration;
 using BlazorApp_arduinoSearch_240824_01.Data;
-using BlazorApp_arduinoSearch_240824_01.Pages;
 using BlazorApp_arduinoSearch_240824_01.Services;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Builder;
-using System.Text.Json;
-
 
 var builder = WebApplication.CreateBuilder(args);
-// Add services to the container.
+
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 
-// DeviceDiscoveryService µî·Ï
+builder.Services.Configure<DeviceDiscoveryOptions>(builder.Configuration.GetSection("DeviceDiscovery"));
+builder.Services.Configure<MqttConnectionOptions>(builder.Configuration.GetSection("MqttConnection"));
+
 builder.Services.AddHttpClient<DeviceDiscoveryService>();
-builder.Services.AddSingleton<MqttService>();
+builder.Services.AddScoped<MqttService>();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
