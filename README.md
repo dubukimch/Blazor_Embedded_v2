@@ -8,7 +8,7 @@ Blazor 기반 임베디드/IoT 연동 프로젝트입니다. 서버 앱은 로�
 | --- | --- | --- |
 | `BlazorApp_arduinoSearch_240824_01` | Blazor Server | 장치 검색, MQTT 연결, LED 제어, 센서 차트 |
 | `BlazorApp3/BlazorApp3` | Blazor WebAssembly/PWA | Unity WebGL 3D 대시보드 |
-| `tests/BlazorApp_arduinoSearch_240824_01.Tests` | xUnit, net8.0 | 장치 검색 설정/후보 IP 로직 테스트 |
+| `tests/BlazorApp_arduinoSearch_240824_01.Tests` | xUnit, net10.0 | 장치 검색 설정/후보 IP 로직 테스트 |
 | `설계` | 문서 | 프로젝트 분석과 구조 설계 |
 | `개발` | 문서 | 개선 작업 목록과 업그레이드 계획 |
 | `작업진행현황` | 문서 | 날짜별 작업 로그 |
@@ -16,8 +16,8 @@ Blazor 기반 임베디드/IoT 연동 프로젝트입니다. 서버 앱은 로�
 ## 요구 사항
 
 - .NET SDK 10.0.x 또는 호환 SDK
-- 현재 프로젝트 대상 프레임워크: `net6.0`
-- 테스트 프로젝트 대상 프레임워크: `net8.0`
+- 현재 앱 대상 프레임워크: `net10.0`
+- 테스트 프로젝트 대상 프레임워크: `net10.0`
 - MQTT 브로커
 - `/device_info`, `/configure_mqtt` 엔드포인트를 제공하는 Arduino 장치
 

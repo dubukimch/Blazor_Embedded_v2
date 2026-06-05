@@ -1,37 +1,37 @@
-# .NET 업그레이드 계획
+# .NET 업그레이드 계획 및 결과
 
 ## 현재 상태
 
-- 두 앱의 대상 프레임워크는 `net6.0`이다.
-- 테스트 프로젝트의 대상 프레임워크는 로컬 테스트 실행을 위해 `net8.0`으로 조정했다.
-- 현재 SDK에서 `net6.0` 지원 종료 경고가 발생한다.
+- 서버 앱 `BlazorApp_arduinoSearch_240824_01` 대상 프레임워크는 `net10.0`이다.
+- WASM 앱 `BlazorApp3` 대상 프레임워크는 `net10.0`이다.
+- 테스트 프로젝트 대상 프레임워크는 `net10.0`이다.
 - 로컬 개발 환경에는 .NET SDK `10.0.300`이 설치되어 있다.
 
-## 목표 프레임워크
+## 적용한 변경
 
-1차 목표는 `net10.0`이다.
-
-운영 장비, 배포 서버, Unity WebGL 빌드 호환성, 사용 중인 NuGet 패키지 호환성 확인 중 문제가 발생하면 임시 목표를 `net8.0`으로 낮춰 단계적으로 진행한다.
-
-## 영향 범위
-
-| 영역 | 영향 |
+| 영역 | 변경 |
 | --- | --- |
-| Blazor Server 앱 | `Microsoft.NET.Sdk.Web` 대상 프레임워크 변경, MQTTnet 호환성 확인 필요 |
-| Blazor WebAssembly 앱 | `Microsoft.AspNetCore.Components.WebAssembly` 패키지 버전 동반 업그레이드 필요 |
-| 테스트 프로젝트 | 앱 대상 프레임워크에 맞춰 테스트 프레임워크도 변경 필요 |
-| CI | `actions/setup-dotnet` 버전과 build/test 명령 확인 필요 |
-| 배포 | 서버 런타임 설치 여부와 포트/방화벽 정책 확인 필요 |
+| Blazor Server 앱 | `net6.0`에서 `net10.0`으로 변경 |
+| Blazor Server 앱 | 오래된 `System.Text.Json` 5.0.2 패키지 참조 제거 |
+| Blazor WebAssembly 앱 | `net6.0`에서 `net10.0`으로 변경 |
+| Blazor WebAssembly 앱 | `Microsoft.AspNetCore.Components.WebAssembly` 패키지를 `10.0.8`로 변경 |
+| 테스트 프로젝트 | `net10.0`으로 변경 |
+| 테스트 프로젝트 | `Microsoft.Extensions.Options` 패키지를 `10.0.0`으로 변경 |
+| CI | `actions/setup-dotnet` 설치 버전을 `10.0.x`로 정리 |
+| Publish profiles | `net6.0` publish 경로와 TargetFramework를 `net10.0`으로 변경 |
 
-## 진행 순서
+## 검증 결과
 
-1. 현재 `net6.0` 상태에서 restore/build/test 기준을 먼저 확보한다.
-2. 서버 앱과 테스트 프로젝트를 목표 프레임워크로 변경한다.
-3. WASM 앱의 Blazor 패키지를 목표 프레임워크에 맞춰 변경한다.
-4. `dotnet restore`, `dotnet build`, `dotnet test`를 실행한다.
-5. 장치 검색, MQTT 연결, 센서 차트, Unity 대시보드를 수동 확인한다.
-6. README와 작업진행현황에 결과를 기록한다.
+| 명령 | 결과 |
+| --- | --- |
+| `dotnet restore BlazorApp_arduinoSearch_240824_01\BlazorApp_arduinoSearch_240824_01.sln` | 성공 |
+| `dotnet restore BlazorApp3\BlazorApp3.sln` | 성공 |
+| `dotnet build BlazorApp_arduinoSearch_240824_01\BlazorApp_arduinoSearch_240824_01.sln --configuration Release --no-restore` | 성공, 경고 0개 |
+| `dotnet build BlazorApp3\BlazorApp3.sln --configuration Release --no-restore` | 성공, 경고 0개 |
+| `dotnet test BlazorApp_arduinoSearch_240824_01\BlazorApp_arduinoSearch_240824_01.sln --configuration Release --no-build` | 성공, 테스트 2개 통과 |
 
-## 보류한 이유
+## 후속 확인
 
-이번 작업에서는 전체 안정화 항목을 먼저 반영하고, 실제 대상 프레임워크 변경은 restore/build 기준 확보 후 별도 단계로 진행한다. 프레임워크 변경은 NuGet 패키지 버전과 배포 런타임까지 함께 움직이므로 빌드 기준이 잡힌 뒤 적용하는 편이 안전하다.
+- 실제 배포 대상 장비에 .NET 10 런타임 또는 호스팅 번들을 설치해야 한다.
+- Arduino 장치, MQTT 브로커, Unity WebGL 화면은 실장비/실브라우저 환경에서 수동 확인이 필요하다.
+- 폐쇄망 배포가 필요하면 Chart.js CDN을 로컬 정적 파일로 전환한다.
