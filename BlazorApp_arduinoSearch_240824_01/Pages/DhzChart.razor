@@ -1,7 +1,5 @@
 @page "/DHZChart"
 @implements IAsyncDisposable
-@using System.Text.Json
-@using System.Text.Json.Serialization
 @inject MqttService MqttService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
@@ -73,30 +71,14 @@
 
     private bool TryReadMqttQuery()
     {
-        var uri = new Uri(NavigationManager.Uri);
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-
-        mqttAddress = query["mqttAddress"] ?? string.Empty;
-        mqttTopic = query["mqttTopic"] ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(mqttAddress))
+        if (!MqttQueryStringParser.TryParse(NavigationManager.Uri, out var parameters, out errorMessage))
         {
-            errorMessage = "MQTT 서버 주소가 없습니다.";
             return false;
         }
 
-        if (!int.TryParse(query["mqttPort"], out mqttPort) || mqttPort is < 1 or > 65535)
-        {
-            errorMessage = "MQTT 포트가 올바르지 않습니다.";
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(mqttTopic))
-        {
-            errorMessage = "MQTT 토픽이 없습니다.";
-            return false;
-        }
-
+        mqttAddress = parameters.Server;
+        mqttPort = parameters.Port;
+        mqttTopic = parameters.Topic;
         return true;
     }
 
@@ -104,28 +86,21 @@
     {
         _ = InvokeAsync(async () =>
         {
-            try
+            if (!SensorPayloadParser.TryParseDhz(message, out var sensorData, out var parseError))
             {
-                var sensorData = JsonSerializer.Deserialize<DhzSensorData>(message);
-
-                if (sensorData == null)
-                {
-                    return;
-                }
-
-                temperatureData.Add(sensorData.Temperature);
-                humidityData.Add(sensorData.Humidity);
-                TrimSeries();
-
-                statusMessage = $"Received message on {topic}.";
-                await UpdateCharts();
+                errorMessage = $"센서 데이터 파싱 실패: {parseError}";
                 StateHasChanged();
+                return;
             }
-            catch (JsonException ex)
-            {
-                errorMessage = $"센서 데이터 파싱 실패: {ex.Message}";
-                StateHasChanged();
-            }
+
+            temperatureData.Add(sensorData.Temperature);
+            humidityData.Add(sensorData.Humidity);
+            TrimSeries();
+
+            errorMessage = string.Empty;
+            statusMessage = $"Received message on {topic}.";
+            await UpdateCharts();
+            StateHasChanged();
         });
     }
 
@@ -172,12 +147,4 @@
         }
     }
 
-    public class DhzSensorData
-    {
-        [JsonPropertyName("temperature")]
-        public float Temperature { get; set; }
-
-        [JsonPropertyName("humidity")]
-        public float Humidity { get; set; }
-    }
 }

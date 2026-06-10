@@ -48,30 +48,14 @@
 
     private bool TryReadMqttQuery()
     {
-        var uri = new Uri(NavigationManager.Uri);
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-
-        mqttAddress = query["mqttAddress"] ?? string.Empty;
-        mqttTopic = query["mqttTopic"] ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(mqttAddress))
+        if (!MqttQueryStringParser.TryParse(NavigationManager.Uri, out var parameters, out errorMessage))
         {
-            errorMessage = "MQTT 서버 주소가 없습니다.";
             return false;
         }
 
-        if (!int.TryParse(query["mqttPort"], out mqttPort) || mqttPort is < 1 or > 65535)
-        {
-            errorMessage = "MQTT 포트가 올바르지 않습니다.";
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(mqttTopic))
-        {
-            errorMessage = "MQTT 토픽이 없습니다.";
-            return false;
-        }
-
+        mqttAddress = parameters.Server;
+        mqttPort = parameters.Port;
+        mqttTopic = parameters.Topic;
         return true;
     }
 
