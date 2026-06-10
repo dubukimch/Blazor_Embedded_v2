@@ -1,0 +1,31 @@
+﻿/* Blazor에서 scoped CSS 적용 */
+::deep .custom-button {
+    background-color: #4caf50; /* 기본 초록색 배경 */
+    color: white;
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 16px;
+    transition: background-color 0.3s ease; /* 호버 시 부드러운 전환 효과 */
+}
+
+::deep .custom-button:hover {
+        background-color: #45a049; /* 마우스를 올렸을 때 더 진한 초록색 */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 호버 시 그림자 효과 */
+        cursor: pointer; /* 호버 시 커서가 손 모양으로 변경 */
+}
+
+::deep .turn-on-button {
+    background-color: #4caf50; /* Turn On 버튼의 기본 배경색 */
+}
+
+::deep .turn-off-button {
+    background-color: #f44336; /* Turn Off 버튼의 기본 배경색 (붉은색) */
+}
+
+::deep .turn-on-button:hover {
+    background-color: #45a049; /* Turn On 버튼 호버 시 색상 변경 */
+}
+
+::deep .turn-off-button:hover {
+    background-color: #e53935; /* Turn Off 버튼 호버 시 색상 변경 */
+}

@@ -77,7 +77,9 @@ public sealed class MqttService : IDisposable
         {
             SetError("MQTT 서버 주소가 비어 있습니다.");
             return false;
+
         }
+    }
 
         if (port is < 1 or > 65535)
         {
@@ -231,5 +233,15 @@ public sealed class MqttService : IDisposable
     {
         LastError = error;
         SetStatus(error);
+
     }
+}
+
+// DeviceInfoResponse 클래스 정의
+public class DeviceInfoResponse
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public string Address { get; set; }
+    public Dictionary<string, string> Topics { get; set; }
 }

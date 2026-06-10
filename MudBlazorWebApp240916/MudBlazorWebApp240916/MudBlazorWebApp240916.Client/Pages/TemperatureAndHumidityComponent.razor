@@ -1,0 +1,98 @@
+﻿@inject MqttService MqttService
+@inject IJSRuntime JSRuntime
+
+<MudDialog Class="custom-dialog">
+    <DialogContent>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+            <MudText Typo="Typo.h6">Temperature and Humidity Control</MudText>
+
+            <!-- On/Off icon button -->
+            <MudIconButton Icon="@ControlIcon"
+                           Color="Color.Info"
+                           OnClick="ToggleControl" />
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <MudText Typo="Typo.subtitle1">Current Temperature Level</MudText>
+
+            <!-- Slider for temperature control -->
+            <MudSlider @bind-Value="TemperatureLevel"
+                       Min="0" Max="40"
+                       Step="0.5"
+                       ValueLabelFormat="{0}°C"
+                       Color="Color.Primary"
+                       Label="Temperature Level"
+                       OnValueChanged="OnTemperatureSliderChanged" />
+
+            <!-- Display temperature slider value -->
+            <MudText Typo="Typo.subtitle1">Temperature: @TemperatureLevel°C</MudText>
+
+            <MudText Typo="Typo.subtitle1">Current Humidity Level</MudText>
+
+            <!-- Slider for humidity control -->
+            <MudSlider @bind-Value="HumidityLevel"
+                       Min="0" Max="100"
+                       Step="1"
+                       ValueLabelFormat="{0}%"
+                       Color="Color.Secondary"
+                       Label="Humidity Level"
+                       OnValueChanged="OnHumiditySliderChanged" />
+
+            <!-- Display humidity slider value -->
+            <MudText Typo="Typo.subtitle1">Humidity: @HumidityLevel%</MudText>
+        </div>
+
+        <!-- Temperature and Humidity Line Chart -->
+        <MudChart ChartType="ChartType.Line"
+                  ChartSeries="@TemperatureAndHumiditySeries"
+                  XAxisLabels="@XAxisLabels"
+                  Width="100%" Height="350px" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    public double TemperatureLevel { get; set; } = 24;  // Initial temperature
+    public double HumidityLevel { get; set; } = 50;     // Initial humidity
+
+    public bool IsControlOn { get; set; } = true;       // Initial on/off state
+    private string ControlIcon => IsControlOn ? Icons.Material.Filled.Thermostat : Icons.Material.Filled.ThermostatAuto;  // Control icon reflects on/off state
+
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    // Reference to the chart series and labels
+    [Parameter]
+    public List<ChartSeries> TemperatureAndHumiditySeries { get; set; }
+
+    [Parameter]
+    public string[] XAxisLabels { get; set; }
+
+    private void Submit () => MudDialog.Close(DialogResult.Ok(true));
+
+    private void Cancel () => MudDialog.Cancel();
+
+    private void ToggleControl ()
+    {
+        IsControlOn = !IsControlOn;  // Toggle control state
+
+        // Send MQTT message to turn control on or off
+        var message = IsControlOn ? "TEMP_HUMIDITY_CONTROL_ON" : "TEMP_HUMIDITY_CONTROL_OFF";
+        MqttService.PublishMessageAsync("temp_humidity/control", message);
+    }
+
+    private void OnTemperatureSliderChanged (double newValue)
+    {
+        TemperatureLevel = newValue;
+        MqttService.PublishMessageAsync("temp_humidity/temperature", TemperatureLevel.ToString());  // Update temperature via MQTT
+    }
+
+    private void OnHumiditySliderChanged (double newValue)
+    {
+        HumidityLevel = newValue;
+        MqttService.PublishMessageAsync("temp_humidity/humidity", HumidityLevel.ToString());  // Update humidity via MQTT
+    }
+}

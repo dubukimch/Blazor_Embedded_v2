@@ -1,0 +1,188 @@
+﻿@page "/"
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JS
+
+<h3>JSON 파일 선택</h3>
+<select @onchange="OnDataFileChange">
+    <option value="" selected disabled>JSON 파일 선택</option>
+    @if (fileList != null)
+    {
+        @foreach (var file in fileList)
+        {
+            <option value="@file">@file</option>
+        }
+    }
+</select>
+
+@if (availableChartTypes != null && availableChartTypes.Count > 0)
+{
+    <h3>차트 유형 선택</h3>
+    <select @onchange="OnChartTypeChange">
+        <option value="" selected disabled>차트 유형 선택</option>
+        @foreach (var chartType in availableChartTypes)
+        {
+            <option value="@chartType.Key" disabled="@(chartType.Value == false)">@chartType.Key</option>
+        }
+    </select>
+}
+
+@if (chartType == "map")
+{
+    <div id="myMap" style="height: 500px;"></div> <!-- Leaflet 맵을 위한 div -->
+}
+else
+{
+    <canvas id="myChart" width="600" height="400"></canvas> <!-- 일반 차트를 위한 canvas -->
+}
+
+@code {
+    private string selectedDataFile;
+    private string chartType = "";
+    private List<string> fileList;  // JSON 파일 목록
+    private Dictionary<string, bool> availableChartTypes = new Dictionary<string, bool>(); // 차트 유형과 활성화 상태
+    private ChartData chartData;
+    private bool shouldRenderChart = false;
+
+    // 모든 차트 유형 목록
+    private List<string> allChartTypes = new List<string> {
+        "bar", "stackedBar", "barHorizontal", "line", "pie", "doughnut", "radar", "polarArea", "bubble", "scatter", "map"
+    };
+
+    protected override async Task OnInitializedAsync ()
+    {
+        var httpClient = HttpClientFactory.CreateClient("default");
+        fileList = await httpClient.GetFromJsonAsync<List<string>>("api/files/list");
+    }
+
+    private async Task OnDataFileChange (ChangeEventArgs e)
+    {
+        selectedDataFile = e.Value.ToString();
+        chartType = ""; // 데이터가 변경되면 차트 유형 초기화
+        await LoadChartData();
+    }
+
+    private async Task LoadChartData ()
+    {
+        if (string.IsNullOrEmpty(selectedDataFile)) return;
+
+        var httpClient = HttpClientFactory.CreateClient("default");
+        var jsonData = await httpClient.GetStringAsync($"data/{selectedDataFile}");
+        chartData = System.Text.Json.JsonSerializer.Deserialize<ChartData>(jsonData);
+
+        UpdateAvailableChartTypes(); // 데이터를 기반으로 차트 유형 활성화/비활성화 업데이트
+        shouldRenderChart = false;
+    }
+
+    private void UpdateAvailableChartTypes ()
+    {
+        availableChartTypes.Clear();
+
+        // 데이터 형식에 따라 차트 유형 활성화 여부 결정
+        bool hasXAxis = chartData.XAxis != null && chartData.XAxis.Count > 0;
+        bool hasMultipleDatasets = chartData.Data != null && chartData.Data.Count > 0;
+        bool hasYAxis = chartData.YAxis != null && chartData.YAxis.Count > 0;
+
+        foreach (var chart in allChartTypes)
+        {
+            switch (chart)
+            {
+                case "bar":
+                case "stackedBar":
+                case "barHorizontal":
+                case "line":
+                    // XAxis와 YAxis 또는 다중 데이터셋이 있는 경우 활성화
+                    availableChartTypes[chart] = hasXAxis && (hasYAxis || hasMultipleDatasets);
+                    break;
+
+                case "pie":
+                case "doughnut":
+                    // YAxis 또는 데이터셋이 있는 경우 활성화
+                    availableChartTypes[chart] = hasYAxis || hasMultipleDatasets;
+                    break;
+
+                case "radar":
+                case "polarArea":
+                    // 다중 데이터셋이 있는 경우 활성화
+                    availableChartTypes[chart] = hasMultipleDatasets;
+                    break;
+
+                case "scatter":
+                case "bubble":
+                    // 각 데이터셋이 x, y 값을 포함해야 함
+                    availableChartTypes[chart] = hasMultipleDatasets && chartData.Data.All(d => d.data.All(value => value is double));
+                    break;
+
+                case "map":
+                    // 지역 정보가 있을 때 활성화
+                    availableChartTypes[chart] = chartData.Regions != null && chartData.Regions.Count > 0;
+                    break;
+
+                default:
+                    availableChartTypes[chart] = false;
+                    break;
+            }
+        }
+
+        // 차트 유형이 비활성화되면 차트 초기화
+        if (!availableChartTypes.ContainsKey(chartType) || !availableChartTypes[chartType])
+        {
+            chartType = "";
+        }
+    }
+    private async Task OnChartTypeChange (ChangeEventArgs e)
+    {
+        chartType = e.Value.ToString();
+
+        if (!string.IsNullOrEmpty(chartType) && availableChartTypes[chartType])
+        {
+            shouldRenderChart = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync (bool firstRender)
+    {
+        if (shouldRenderChart && !string.IsNullOrEmpty(chartType))
+        {
+            if (chartType == "map")
+            {
+                await JS.InvokeVoidAsync("renderMap", $"data/{selectedDataFile}");
+            }
+            else
+            {
+                if (chartData.Data != null && chartData.Data.Count > 0)
+                {
+                    var datasets = chartData.Data.Select(d => new { label = d.label, data = d.data }).ToList();
+                    await JS.InvokeVoidAsync("renderChart", chartType, chartData.XAxis, datasets);
+                }
+                else if (chartData.YAxis != null && chartData.XAxis != null)
+                {
+                    var dataset = new { label = "데이터셋", data = chartData.YAxis };
+                    await JS.InvokeVoidAsync("renderChart", chartType, chartData.XAxis, new[] { dataset });
+                }
+            }
+            shouldRenderChart = false;
+        }
+    }
+
+    public class ChartData
+    {
+        public List<string> XAxis { get; set; } = new List<string>();
+        public List<double> YAxis { get; set; } = new List<double>();
+        public List<ChartDataset> Data { get; set; } = new List<ChartDataset>();
+        public List<RegionData> Regions { get; set; } = new List<RegionData>(); // 지역 정보
+    }
+
+    public class ChartDataset
+    {
+        public string label { get; set; } = "";
+        public List<double> data { get; set; } = new List<double>();
+    }
+
+    public class RegionData
+    {
+        public string name { get; set; }
+        public double lat { get; set; }
+        public double lng { get; set; }
+        public double value { get; set; }
+    }
+}

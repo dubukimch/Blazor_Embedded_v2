@@ -1,0 +1,1804 @@
+{
+    "XAxis": [
+        "20세 이상 ~ 25세 미만",
+        "25세 이상 ~ 30세 미만",
+        "30세 이상 ~ 35세 미만",
+        "35세 이상 ~ 40세 미만",
+        "40세 이상 ~ 45세 미만",
+        "45세 이상 ~ 50세 미만",
+        "50세 이상 ~ 55세 미만",
+        "55세 이상 ~ 60세 미만",
+        "60세 이상 ~ 65세 미만",
+        "65세 이상 ~ 70세 미만",
+        "70세 이상"
+    ],
+    "EventNames": [
+        "af_account_click",
+        "af_autochrg_accountselect",
+        "af_autochrg_complete",
+        "af_autochrg_ob_complete",
+        "af_autochrg_ob_start",
+        "af_certification_click",
+        "af_cgv_click",
+        "af_cgv_view",
+        "af_chatbot_click",
+        "af_complete_registration",
+        "af_content_view",
+        "af_coupon_click",
+        "af_coupon_pageview",
+        "af_creditcard_click",
+        "af_estate_pageview",
+        "af_event_view",
+        "af_exchange_start",
+        "af_finishjoin_popup",
+        "af_fit_view",
+        "af_gift_click",
+        "af_gift_pageview",
+        "af_gomebusan_click",
+        "af_gomebusan_view",
+        "af_honey_click",
+        "af_honey_view",
+        "af_initiated_checkout",
+        "af_lemontip_click",
+        "af_lemontip_onecare_click",
+        "af_lemontip_pageview",
+        "af_life_click",
+        "af_life_view",
+        "af_loan_approval",
+        "af_loan_reject",
+        "af_main_click",
+        "af_main_popup",
+        "af_main_view",
+        "af_mainbar_click",
+        "af_moneyingplus_click",
+        "af_moneyingplus_pageview",
+        "af_mycard_join",
+        "af_mycard_view",
+        "af_mydata_click",
+        "af_mypage_view",
+        "af_onecare_click",
+        "af_othercard _join",
+        "af_p_basicinfo",
+        "af_p_cardloan_1",
+        "af_p_cardloan_2",
+        "af_p_cardloan_3",
+        "af_p_cardloan_4",
+        "af_p_cardloan_5",
+        "af_p_cardloan_6",
+        "af_p_cardloan_7",
+        "af_p_cardloan_cancel",
+        "af_p_cardloan_complete",
+        "af_p_cardloan_error",
+        "af_p_cardloan_start",
+        "af_p_certification_complete",
+        "af_p_depositpopup",
+        "af_p_essentialinfo",
+        "af_p_extrainfo",
+        "af_p_finishjoin",
+        "af_p_getbalance_1",
+        "af_p_getbalance_2",
+        "af_p_getbalance_3",
+        "af_p_getbalance_complete",
+        "af_p_getbalance_fail",
+        "af_p_getbalance_selectall",
+        "af_p_getbalance_selectallmoney",
+        "af_p_getbalance_start",
+        "af_p_getbalance_toastmessge",
+        "af_p_giftremit_1",
+        "af_p_giftremit_2",
+        "af_p_giftremit_3",
+        "af_p_giftremit_4",
+        "af_p_giftremit_complete",
+        "af_p_giftremit_start",
+        "af_p_identification_1",
+        "af_p_identification_start",
+        "af_p_join",
+        "af_p_loaninquiry_1",
+        "af_p_loaninquiry_2",
+        "af_p_loaninquiry_3",
+        "af_p_loaninquiry_start",
+        "af_p_moimpopup",
+        "af_p_otppassword",
+        "af_p_signature_complete",
+        "af_p_simplepass_1",
+        "af_p_simplepass_2",
+        "af_p_term",
+        "af_p_underage_exit",
+        "af_p_underage_finishexit",
+        "af_p_underage_pinmoney",
+        "af_purchase",
+        "af_s_animaladopt",
+        "af_service_purchase",
+        "af_service_view",
+        "af_snack365_view",
+        "af_ticket_click",
+        "af_underage_finish",
+        "af_underage_login",
+        "af_underage_start",
+        "af_underagemain_pageview",
+        "af_welcomebox_click",
+        "af_welcomebox_pageview"
+    ],
+    "Data": [
+        {
+            "label": "af_account_click",
+            "data": [
+                869,
+                2471,
+                4678,
+                5721,
+                11747,
+                16337,
+                23612,
+                28441,
+                28320,
+                23682,
+                21623
+            ]
+        },
+        {
+            "label": "af_autochrg_accountselect",
+            "data": [
+                5,
+                31,
+                62,
+                53,
+                80,
+                68,
+                129,
+                101,
+                65,
+                33,
+                43
+            ]
+        },
+        {
+            "label": "af_autochrg_complete",
+            "data": [
+                4,
+                30,
+                60,
+                49,
+                73,
+                57,
+                108,
+                90,
+                58,
+                26,
+                30
+            ]
+        },
+        {
+            "label": "af_autochrg_ob_complete",
+            "data": [
+                5,
+                24,
+                44,
+                42,
+                47,
+                32,
+                94,
+                74,
+                50,
+                37,
+                19
+            ]
+        },
+        {
+            "label": "af_autochrg_ob_start",
+            "data": [
+                6,
+                43,
+                65,
+                59,
+                63,
+                83,
+                161,
+                137,
+                116,
+                79,
+                75
+            ]
+        },
+        {
+            "label": "af_certification_click",
+            "data": [
+                206,
+                1280,
+                2751,
+                3258,
+                4901,
+                5283,
+                4462,
+                3384,
+                1575,
+                731,
+                380
+            ]
+        },
+        {
+            "label": "af_cgv_click",
+            "data": [
+                194,
+                1094,
+                2118,
+                3293,
+                5421,
+                8284,
+                9582,
+                7059,
+                4365,
+                2903,
+                1326
+            ]
+        },
+        {
+            "label": "af_cgv_view",
+            "data": [
+                333,
+                1712,
+                3160,
+                4922,
+                8406,
+                13322,
+                17527,
+                16304,
+                14217,
+                11858,
+                8498
+            ]
+        },
+        {
+            "label": "af_chatbot_click",
+            "data": [
+                783,
+                2858,
+                4632,
+                5953,
+                12139,
+                21045,
+                31423,
+                41328,
+                42283,
+                35709,
+                29963
+            ]
+        },
+        {
+            "label": "af_complete_registration",
+            "data": [
+                100,
+                271,
+                440,
+                445,
+                629,
+                550,
+                508,
+                371,
+                187,
+                113,
+                43
+            ]
+        },
+        {
+            "label": "af_content_view",
+            "data": [
+                16228,
+                66243,
+                133296,
+                163399,
+                269397,
+                376774,
+                498535,
+                558464,
+                476912,
+                350767,
+                241571
+            ]
+        },
+        {
+            "label": "af_coupon_click",
+            "data": [
+                138,
+                781,
+                1600,
+                2551,
+                5317,
+                7596,
+                7144,
+                4610,
+                2676,
+                1639,
+                894
+            ]
+        },
+        {
+            "label": "af_coupon_pageview",
+            "data": [
+                901,
+                5238,
+                10239,
+                18159,
+                34492,
+                49781,
+                51959,
+                39346,
+                26811,
+                19073,
+                11923
+            ]
+        },
+        {
+            "label": "af_creditcard_click",
+            "data": [
+                17,
+                31,
+                46,
+                73,
+                63,
+                118,
+                142,
+                92,
+                63,
+                72,
+                56
+            ]
+        },
+        {
+            "label": "af_estate_pageview",
+            "data": [
+                0,
+                0,
+                2,
+                4,
+                10,
+                3,
+                3,
+                4,
+                2,
+                5,
+                0
+            ]
+        },
+        {
+            "label": "af_event_view",
+            "data": [
+                3855,
+                18400,
+                33891,
+                53480,
+                97030,
+                129141,
+                136314,
+                119291,
+                96557,
+                75624,
+                57952
+            ]
+        },
+        {
+            "label": "af_exchange_start",
+            "data": [
+                932,
+                2425,
+                3944,
+                5053,
+                8709,
+                12906,
+                11857,
+                8640,
+                6173,
+                3451,
+                2610
+            ]
+        },
+        {
+            "label": "af_finishjoin_popup",
+            "data": [
+                168,
+                771,
+                1561,
+                1636,
+                2072,
+                2080,
+                1991,
+                1496,
+                1015,
+                471,
+                280
+            ]
+        },
+        {
+            "label": "af_fit_view",
+            "data": [
+                3,
+                3,
+                8,
+                18,
+                22,
+                24,
+                42,
+                53,
+                50,
+                47,
+                41
+            ]
+        },
+        {
+            "label": "af_gift_click",
+            "data": [
+                33,
+                47,
+                9,
+                34,
+                47,
+                51,
+                108,
+                93,
+                72,
+                74,
+                16
+            ]
+        },
+        {
+            "label": "af_gift_pageview",
+            "data": [
+                75,
+                205,
+                356,
+                511,
+                880,
+                1290,
+                1442,
+                1087,
+                721,
+                514,
+                227
+            ]
+        },
+        {
+            "label": "af_gomebusan_click",
+            "data": [
+                73,
+                379,
+                892,
+                1446,
+                2030,
+                2906,
+                3858,
+                3404,
+                1808,
+                1233,
+                755
+            ]
+        },
+        {
+            "label": "af_gomebusan_view",
+            "data": [
+                172,
+                799,
+                1682,
+                2721,
+                3982,
+                5438,
+                6801,
+                5687,
+                3657,
+                2564,
+                1779
+            ]
+        },
+        {
+            "label": "af_honey_click",
+            "data": [
+                3,
+                24,
+                27,
+                61,
+                172,
+                148,
+                363,
+                317,
+                161,
+                115,
+                29
+            ]
+        },
+        {
+            "label": "af_honey_view",
+            "data": [
+                17,
+                52,
+                115,
+                174,
+                577,
+                398,
+                995,
+                962,
+                504,
+                282,
+                145
+            ]
+        },
+        {
+            "label": "af_initiated_checkout",
+            "data": [
+                3588,
+                13754,
+                24457,
+                27020,
+                39408,
+                50472,
+                55372,
+                47303,
+                35539,
+                25990,
+                19700
+            ]
+        },
+        {
+            "label": "af_lemontip_click",
+            "data": [
+                13,
+                131,
+                72,
+                161,
+                262,
+                433,
+                368,
+                228,
+                142,
+                107,
+                53
+            ]
+        },
+        {
+            "label": "af_lemontip_onecare_click",
+            "data": [
+                2,
+                12,
+                24,
+                26,
+                100,
+                132,
+                151,
+                74,
+                46,
+                41,
+                4
+            ]
+        },
+        {
+            "label": "af_lemontip_pageview",
+            "data": [
+                104,
+                436,
+                490,
+                860,
+                1635,
+                2158,
+                2392,
+                1512,
+                924,
+                751,
+                346
+            ]
+        },
+        {
+            "label": "af_life_click",
+            "data": [
+                870,
+                4137,
+                8325,
+                13166,
+                23499,
+                34638,
+                41968,
+                36670,
+                27560,
+                22420,
+                10616
+            ]
+        },
+        {
+            "label": "af_life_view",
+            "data": [
+                1637,
+                7919,
+                15224,
+                22380,
+                38767,
+                58186,
+                72460,
+                70417,
+                59649,
+                49953,
+                32387
+            ]
+        },
+        {
+            "label": "af_loan_approval",
+            "data": [
+                26,
+                525,
+                1348,
+                1434,
+                1712,
+                1645,
+                1497,
+                1071,
+                541,
+                329,
+                150
+            ]
+        },
+        {
+            "label": "af_loan_reject",
+            "data": [
+                76,
+                1035,
+                2081,
+                1760,
+                2381,
+                2402,
+                2050,
+                1358,
+                668,
+                356,
+                211
+            ]
+        },
+        {
+            "label": "af_main_click",
+            "data": [
+                933,
+                2761,
+                4625,
+                5365,
+                9079,
+                11266,
+                12124,
+                9614,
+                7421,
+                5549,
+                5622
+            ]
+        },
+        {
+            "label": "af_main_popup",
+            "data": [
+                12869,
+                51838,
+                99251,
+                130196,
+                213059,
+                263562,
+                287171,
+                232375,
+                150416,
+                99591,
+                72116
+            ]
+        },
+        {
+            "label": "af_main_view",
+            "data": [
+                237,
+                964,
+                1556,
+                1517,
+                2086,
+                1836,
+                2307,
+                2064,
+                2043,
+                3586,
+                2793
+            ]
+        },
+        {
+            "label": "af_mainbar_click",
+            "data": [
+                34,
+                74,
+                90,
+                105,
+                113,
+                62,
+                67,
+                30,
+                31,
+                80,
+                100
+            ]
+        },
+        {
+            "label": "af_moneyingplus_click",
+            "data": [
+                399,
+                2069,
+                5037,
+                7094,
+                12765,
+                21934,
+                33917,
+                40672,
+                38353,
+                30216,
+                15331
+            ]
+        },
+        {
+            "label": "af_moneyingplus_pageview",
+            "data": [
+                406,
+                2106,
+                5106,
+                6781,
+                12520,
+                21955,
+                34650,
+                44161,
+                43186,
+                36966,
+                21141
+            ]
+        },
+        {
+            "label": "af_mycard_join",
+            "data": [
+                6,
+                14,
+                17,
+                19,
+                15,
+                20,
+                19,
+                18,
+                7,
+                6,
+                13
+            ]
+        },
+        {
+            "label": "af_mycard_view",
+            "data": [
+                2,
+                13,
+                4,
+                18,
+                21,
+                22,
+                20,
+                15,
+                23,
+                6,
+                10
+            ]
+        },
+        {
+            "label": "af_mydata_click",
+            "data": [
+                1,
+                0,
+                2,
+                1,
+                2,
+                5,
+                0,
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "label": "af_mypage_view",
+            "data": [
+                12,
+                73,
+                239,
+                351,
+                386,
+                578,
+                602,
+                731,
+                861,
+                624,
+                474
+            ]
+        },
+        {
+            "label": "af_onecare_click",
+            "data": [
+                0,
+                0,
+                0,
+                19,
+                2,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "label": "af_othercard _join",
+            "data": [
+                0,
+                6,
+                7,
+                5,
+                10,
+                6,
+                8,
+                6,
+                4,
+                2,
+                4
+            ]
+        },
+        {
+            "label": "af_p_basicinfo",
+            "data": [
+                92,
+                286,
+                542,
+                539,
+                739,
+                636,
+                579,
+                446,
+                213,
+                146,
+                77
+            ]
+        },
+        {
+            "label": "af_p_cardloan_1",
+            "data": [
+                0,
+                37,
+                80,
+                107,
+                218,
+                530,
+                568,
+                552,
+                231,
+                120,
+                0
+            ]
+        },
+        {
+            "label": "af_p_cardloan_2",
+            "data": [
+                0,
+                27,
+                81,
+                93,
+                194,
+                470,
+                491,
+                481,
+                197,
+                100,
+                0
+            ]
+        },
+        {
+            "label": "af_p_cardloan_3",
+            "data": [
+                0,
+                30,
+                88,
+                112,
+                196,
+                505,
+                512,
+                496,
+                219,
+                114,
+                0
+            ]
+        },
+        {
+            "label": "af_p_cardloan_4",
+            "data": [
+                0,
+                24,
+                87,
+                92,
+                233,
+                565,
+                622,
+                666,
+                354,
+                124,
+                0
+            ]
+        },
+        {
+            "label": "af_p_cardloan_5",
+            "data": [
+                0,
+                24,
+                69,
+                71,
+                196,
+                504,
+                396,
+                432,
+                225,
+                108,
+                0
+            ]
+        },
+        {
+            "label": "af_p_cardloan_6",
+            "data": [
+                0,
+                22,
+                56,
+                61,
+                93,
+                294,
+                270,
+                320,
+                142,
+                27,
+                0
+            ]
+        },
+        {
+            "label": "af_p_cardloan_7",
+            "data": [
+                0,
+                22,
+                56,
+                64,
+                95,
+                308,
+                286,
+                355,
+                162,
+                25,
+                0
+            ]
+        },
+        {
+            "label": "af_p_cardloan_cancel",
+            "data": [
+                0,
+                1,
+                3,
+                10,
+                6,
+                2,
+                3,
+                12,
+                3,
+                0,
+                0
+            ]
+        },
+        {
+            "label": "af_p_cardloan_complete",
+            "data": [
+                0,
+                28,
+                68,
+                67,
+                126,
+                414,
+                393,
+                502,
+                220,
+                39,
+                0
+            ]
+        },
+        {
+            "label": "af_p_cardloan_error",
+            "data": [
+                0,
+                2,
+                2,
+                6,
+                101,
+                154,
+                89,
+                94,
+                58,
+                2,
+                0
+            ]
+        },
+        {
+            "label": "af_p_cardloan_start",
+            "data": [
+                0,
+                42,
+                146,
+                184,
+                343,
+                845,
+                971,
+                960,
+                416,
+                177,
+                0
+            ]
+        },
+        {
+            "label": "af_p_certification_complete",
+            "data": [
+                123,
+                368,
+                665,
+                645,
+                925,
+                951,
+                911,
+                875,
+                585,
+                412,
+                356
+            ]
+        },
+        {
+            "label": "af_p_depositpopup",
+            "data": [
+                2,
+                5,
+                12,
+                35,
+                61,
+                77,
+                79,
+                50,
+                33,
+                10,
+                4
+            ]
+        },
+        {
+            "label": "af_p_essentialinfo",
+            "data": [
+                90,
+                292,
+                541,
+                532,
+                745,
+                641,
+                584,
+                438,
+                212,
+                142,
+                73
+            ]
+        },
+        {
+            "label": "af_p_extrainfo",
+            "data": [
+                89,
+                285,
+                530,
+                512,
+                732,
+                617,
+                556,
+                429,
+                207,
+                139,
+                68
+            ]
+        },
+        {
+            "label": "af_p_finishjoin",
+            "data": [
+                130,
+                377,
+                648,
+                655,
+                833,
+                777,
+                759,
+                596,
+                345,
+                216,
+                193
+            ]
+        },
+        {
+            "label": "af_p_getbalance_1",
+            "data": [
+                198,
+                283,
+                848,
+                1281,
+                3572,
+                4778,
+                5954,
+                7558,
+                6939,
+                4735,
+                3790
+            ]
+        },
+        {
+            "label": "af_p_getbalance_2",
+            "data": [
+                188,
+                251,
+                788,
+                1151,
+                3337,
+                4366,
+                5111,
+                6366,
+                5519,
+                3581,
+                2288
+            ]
+        },
+        {
+            "label": "af_p_getbalance_3",
+            "data": [
+                182,
+                226,
+                739,
+                1102,
+                3183,
+                4165,
+                4832,
+                5923,
+                5201,
+                3228,
+                1949
+            ]
+        },
+        {
+            "label": "af_p_getbalance_complete",
+            "data": [
+                182,
+                227,
+                736,
+                1109,
+                3172,
+                4154,
+                4813,
+                5921,
+                5193,
+                3235,
+                1940
+            ]
+        },
+        {
+            "label": "af_p_getbalance_fail",
+            "data": [
+                0,
+                0,
+                4,
+                0,
+                11,
+                14,
+                23,
+                10,
+                6,
+                3,
+                4
+            ]
+        },
+        {
+            "label": "af_p_getbalance_selectall",
+            "data": [
+                6,
+                52,
+                121,
+                120,
+                410,
+                576,
+                875,
+                1165,
+                1479,
+                1292,
+                1097
+            ]
+        },
+        {
+            "label": "af_p_getbalance_selectallmoney",
+            "data": [
+                72,
+                121,
+                258,
+                502,
+                1241,
+                2208,
+                2618,
+                3636,
+                3854,
+                2927,
+                2305
+            ]
+        },
+        {
+            "label": "af_p_getbalance_start",
+            "data": [
+                248,
+                821,
+                1542,
+                2634,
+                5291,
+                7380,
+                10051,
+                11186,
+                10825,
+                8763,
+                8436
+            ]
+        },
+        {
+            "label": "af_p_getbalance_toastmessge",
+            "data": [
+                0,
+                0,
+                0,
+                8,
+                16,
+                8,
+                13,
+                19,
+                17,
+                1,
+                2
+            ]
+        },
+        {
+            "label": "af_p_giftremit_1",
+            "data": [
+                0,
+                0,
+                0,
+                12,
+                6,
+                25,
+                69,
+                60,
+                32,
+                28,
+                8
+            ]
+        },
+        {
+            "label": "af_p_giftremit_2",
+            "data": [
+                0,
+                1,
+                0,
+                13,
+                5,
+                48,
+                102,
+                79,
+                46,
+                47,
+                10
+            ]
+        },
+        {
+            "label": "af_p_giftremit_3",
+            "data": [
+                0,
+                4,
+                3,
+                22,
+                22,
+                70,
+                162,
+                120,
+                78,
+                73,
+                27
+            ]
+        },
+        {
+            "label": "af_p_giftremit_4",
+            "data": [
+                0,
+                1,
+                0,
+                9,
+                4,
+                42,
+                91,
+                67,
+                38,
+                37,
+                9
+            ]
+        },
+        {
+            "label": "af_p_giftremit_complete",
+            "data": [
+                0,
+                0,
+                0,
+                8,
+                4,
+                43,
+                91,
+                71,
+                35,
+                36,
+                9
+            ]
+        },
+        {
+            "label": "af_p_giftremit_start",
+            "data": [
+                0,
+                0,
+                0,
+                13,
+                7,
+                30,
+                89,
+                64,
+                38,
+                31,
+                11
+            ]
+        },
+        {
+            "label": "af_p_identification_1",
+            "data": [
+                1,
+                2,
+                0,
+                1,
+                3,
+                10,
+                0,
+                0,
+                2,
+                0,
+                0
+            ]
+        },
+        {
+            "label": "af_p_identification_start",
+            "data": [
+                1,
+                2,
+                0,
+                1,
+                3,
+                8,
+                0,
+                0,
+                2,
+                0,
+                0
+            ]
+        },
+        {
+            "label": "af_p_join",
+            "data": [
+                201,
+                522,
+                878,
+                837,
+                1170,
+                1184,
+                1184,
+                1105,
+                824,
+                599,
+                470
+            ]
+        },
+        {
+            "label": "af_p_loaninquiry_1",
+            "data": [
+                6,
+                64,
+                199,
+                159,
+                144,
+                123,
+                73,
+                85,
+                67,
+                23,
+                55
+            ]
+        },
+        {
+            "label": "af_p_loaninquiry_2",
+            "data": [
+                3,
+                23,
+                81,
+                66,
+                55,
+                45,
+                25,
+                34,
+                29,
+                9,
+                12
+            ]
+        },
+        {
+            "label": "af_p_loaninquiry_3",
+            "data": [
+                5,
+                29,
+                100,
+                70,
+                73,
+                56,
+                35,
+                40,
+                30,
+                15,
+                23
+            ]
+        },
+        {
+            "label": "af_p_loaninquiry_start",
+            "data": [
+                62,
+                817,
+                1831,
+                1747,
+                2254,
+                1989,
+                1725,
+                1091,
+                682,
+                345,
+                250
+            ]
+        },
+        {
+            "label": "af_p_moimpopup",
+            "data": [
+                1,
+                16,
+                19,
+                13,
+                28,
+                46,
+                52,
+                107,
+                48,
+                33,
+                8
+            ]
+        },
+        {
+            "label": "af_p_otppassword",
+            "data": [
+                0,
+                3,
+                0,
+                5,
+                9,
+                8,
+                13,
+                5,
+                7,
+                4,
+                0
+            ]
+        },
+        {
+            "label": "af_p_signature_complete",
+            "data": [
+                78,
+                233,
+                447,
+                434,
+                604,
+                503,
+                455,
+                347,
+                157,
+                100,
+                46
+            ]
+        },
+        {
+            "label": "af_p_simplepass_1",
+            "data": [
+                89,
+                248,
+                443,
+                438,
+                608,
+                526,
+                470,
+                366,
+                177,
+                114,
+                67
+            ]
+        },
+        {
+            "label": "af_p_simplepass_2",
+            "data": [
+                88,
+                247,
+                442,
+                440,
+                607,
+                524,
+                462,
+                362,
+                177,
+                112,
+                65
+            ]
+        },
+        {
+            "label": "af_p_term",
+            "data": [
+                112,
+                356,
+                626,
+                606,
+                819,
+                716,
+                661,
+                520,
+                259,
+                187,
+                147
+            ]
+        },
+        {
+            "label": "af_p_underage_exit",
+            "data": [
+                3,
+                0,
+                0,
+                9,
+                24,
+                24,
+                2,
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "label": "af_p_underage_finishexit",
+            "data": [
+                1,
+                0,
+                0,
+                7,
+                24,
+                20,
+                2,
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "label": "af_p_underage_pinmoney",
+            "data": [
+                0,
+                0,
+                1,
+                3,
+                53,
+                39,
+                7,
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "label": "af_purchase",
+            "data": [
+                474,
+                2094,
+                4016,
+                4653,
+                6893,
+                9917,
+                12617,
+                12687,
+                11732,
+                10343,
+                8477
+            ]
+        },
+        {
+            "label": "af_s_animaladopt",
+            "data": [
+                59,
+                195,
+                298,
+                426,
+                593,
+                1041,
+                1497,
+                1127,
+                710,
+                438,
+                214
+            ]
+        },
+        {
+            "label": "af_service_purchase",
+            "data": [
+                168,
+                584,
+                1096,
+                1264,
+                2138,
+                3089,
+                3455,
+                3028,
+                2482,
+                1768,
+                1280
+            ]
+        },
+        {
+            "label": "af_service_view",
+            "data": [
+                125121,
+                471009,
+                984542,
+                1375918,
+                2568113,
+                3911818,
+                5069702,
+                5240671,
+                4203091,
+                2752671,
+                1598230
+            ]
+        },
+        {
+            "label": "af_snack365_view",
+            "data": [
+                154,
+                796,
+                1471,
+                2312,
+                3968,
+                5709,
+                6236,
+                4504,
+                3354,
+                2614,
+                1863
+            ]
+        },
+        {
+            "label": "af_ticket_click",
+            "data": [
+                185,
+                1119,
+                2352,
+                2546,
+                3740,
+                5089,
+                4736,
+                2860,
+                1723,
+                879,
+                486
+            ]
+        },
+        {
+            "label": "af_underage_finish",
+            "data": [
+                7,
+                10,
+                36,
+                88,
+                300,
+                322,
+                137,
+                110,
+                47,
+                41,
+                28
+            ]
+        },
+        {
+            "label": "af_underage_login",
+            "data": [
+                31,
+                64,
+                101,
+                1149,
+                5298,
+                5007,
+                1557,
+                289,
+                153,
+                157,
+                93
+            ]
+        },
+        {
+            "label": "af_underage_start",
+            "data": [
+                9,
+                14,
+                44,
+                92,
+                333,
+                356,
+                171,
+                83,
+                67,
+                51,
+                39
+            ]
+        },
+        {
+            "label": "af_underagemain_pageview",
+            "data": [
+                89,
+                118,
+                248,
+                2676,
+                11988,
+                11593,
+                3289,
+                509,
+                321,
+                224,
+                148
+            ]
+        },
+        {
+            "label": "af_welcomebox_click",
+            "data": [
+                12,
+                107,
+                152,
+                209,
+                147,
+                176,
+                78,
+                55,
+                32,
+                9,
+                5
+            ]
+        },
+        {
+            "label": "af_welcomebox_pageview",
+            "data": [
+                33,
+                218,
+                321,
+                418,
+                525,
+                458,
+                303,
+                208,
+                135,
+                48,
+                20
+            ]
+        }
+    ]
+}

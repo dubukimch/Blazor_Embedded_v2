@@ -2,6 +2,7 @@ using BlazorApp_arduinoSearch_240824_01.Configuration;
 using BlazorApp_arduinoSearch_240824_01.Data;
 using BlazorApp_arduinoSearch_240824_01.Services;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
@@ -15,6 +16,7 @@ builder.Services.AddHttpClient<DeviceDiscoveryService>();
 builder.Services.AddScoped<MqttService>();
 
 var app = builder.Build();
+
 
 if (!app.Environment.IsDevelopment())
 {
@@ -30,5 +32,25 @@ app.UseRouting();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
+
+// Electron Bootstrapping
+if (HybridSupport.IsElectronActive)
+{
+    Task.Run(async () =>
+    {
+        var window = await Electron.WindowManager.CreateWindowAsync(new BrowserWindowOptions
+        {
+            Width = 1152,
+            Height = 864
+        });
+
+        window.OnClosed += () =>
+        {
+            Electron.App.Quit();
+        };
+    });
+}
+
+
 
 app.Run("http://0.0.0.0:5000");

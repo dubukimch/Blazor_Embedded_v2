@@ -79,7 +79,34 @@ else if (devices.Any())
                         else
                         {
                             <button class="btn btn-danger btn-sm" disabled>오류 발생</button>
+
                         }
+                    </td>
+                    <td>
+                        <input type="text" placeholder="MQTT 서버" @bind="@device.MqttServer" />
+                    </td>
+                    <td>
+                        <input type="text" placeholder="MQTT 포트" @bind="@device.MqttPort" />
+                    </td>
+                    <td>
+                        @if (device.MqttTopics != null && device.MqttTopics.Any())
+                        {
+                            <MatTreeView TNode="TreeNodeModel"
+                                         RootNode="@device.TopicTreeRootNode"
+                                         GetChildNodesCallback="@((n) => n.Nodes)"
+                                         @bind-SelectedNode="@device.SelectedTopicNode">
+                                <NodeTemplate>
+                                    @context.Name
+                                </NodeTemplate>
+                            </MatTreeView>
+                        }
+                        else
+                        {
+                            <p>아두이노로부터 토픽을 불러오는 중...</p>
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-success" @onclick="() => ConnectToDevice(device)" disabled="@(!device.MqttTopics?.Any() ?? true)">연결</button>
                     </td>
                 </tr>
             }
@@ -101,7 +128,8 @@ else
 
     private int ProgressMax => Math.Max(1, discoveryProgress.Total);
 
-    protected override async Task OnInitializedAsync()
+
+    private void OpenModal ()
     {
         var progress = new Progress<DeviceDiscoveryProgress>(value =>
         {
@@ -114,10 +142,19 @@ else
         });
 
         devices = await DeviceDiscoveryService.DiscoverDevicesAsync(progress);
+
         isLoading = false;
+
+        foreach (var device in devices)
+        {
+            device.MqttServer = GetLocalIPAddress();
+            device.MqttPort = "1883";
+
+            device.TopicTreeRootNode = GenerateTreeNode(device.MqttTopics);
+        }
     }
 
-    private async Task ConnectToDevice(Device device)
+    private TreeNodeModel GenerateTreeNode (Dictionary<string, List<string>> mqttTopics)
     {
         var deviceKey = GetDeviceKey(device);
         connectionErrors.Remove(deviceKey);
@@ -234,5 +271,15 @@ else
     public void Dispose()
     {
         disposed = true;
+
+    }
+
+    private string GetLocalIPAddress ()
+    {
+        var host = Dns.GetHostName();
+        var ip = Dns.GetHostAddresses(host)
+    .FirstOrDefault(i => i.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+
+        return ip?.ToString() ?? "localhost";
     }
 }

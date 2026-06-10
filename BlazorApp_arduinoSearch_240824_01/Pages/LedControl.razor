@@ -28,7 +28,12 @@
     private string errorMessage = string.Empty;
     private bool isReady;
 
-    protected override async Task OnInitializedAsync()
+
+    private int[] morningData = new int[4];    // 동, 서, 남, 북 조도센서 아침 값
+    private int[] afternoonData = new int[4];  // 동, 서, 남, 북 조도센서 점심 값
+    private int[] eveningData = new int[4];    // 동, 서, 남, 북 조도센서 저녁 값
+
+    protected override async Task OnInitializedAsync ()
     {
         MqttService.OnMessageReceived += HandleMqttMessage;
 
@@ -89,5 +94,6 @@
     public void Dispose()
     {
         MqttService.OnMessageReceived -= HandleMqttMessage;
+
     }
 }

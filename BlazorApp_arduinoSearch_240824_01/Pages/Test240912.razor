@@ -1,0 +1,23 @@
+﻿@page "/Test240912"
+<h3>Test240912</h3>
+<p>This is the test240912 dialog content.</p>
+
+<MatButton OnClick="@(async () => await TurnOn())" Raised="true">Turn On</MatButton>
+<MatButton OnClick="@(async () => await TurnOff())" Raised="true">Turn Off</MatButton>
+
+
+@code {
+    private async Task TurnOn ()
+    {
+        Console.WriteLine("home/led => ON");
+
+        //await MqttService.PublishMessageAsync("home/led", "ON");
+    }
+
+    private async Task TurnOff ()
+    {
+        Console.WriteLine("home/led => OFF");
+
+        //await MqttService.PublishMessageAsync("home/led", "OFF");
+    }
+}

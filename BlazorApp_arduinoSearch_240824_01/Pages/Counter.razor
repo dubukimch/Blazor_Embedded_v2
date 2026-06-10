@@ -1,5 +1,5 @@
 ﻿@page "/counter"
-
+@inject IMatDialogService MatDialogService
 <PageTitle>Counter</PageTitle>
 
 <h1>Counter</h1>
@@ -7,7 +7,7 @@
 <p role="status">Current count: @currentCount</p>
 
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
-
+<MatButton OnClick="OpenDialogFromService" Raised="true">Test240912</MatButton>
 @code {
     private int currentCount = 0;
 
@@ -15,4 +15,11 @@
     {
         currentCount++;
     }
+
+    async Task OpenDialogFromService ()
+    {
+        await MatDialogService.OpenAsync(typeof(Test240912), null);
+
+    }
+
 }

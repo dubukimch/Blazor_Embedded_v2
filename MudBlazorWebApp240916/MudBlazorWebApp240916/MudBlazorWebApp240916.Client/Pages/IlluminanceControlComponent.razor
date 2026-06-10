@@ -1,0 +1,159 @@
+﻿@inject MqttService MqttService
+@inject IJSRuntime JSRuntime
+
+<MudDialog Class="custom-dialog">
+    <DialogContent>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+            <div style="flex-grow: 1; display: flex; align-items: center;">
+                <MudDatePicker @bind-Date="@Date1" Style="max-width: 300px;" />
+            </div>
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; position: relative;">
+                <MudToggleIconButton @bind-Toggled="IsLedOn"
+                                     Icon="@Icons.Material.Filled.PowerOff"
+                                     Color="Color.Error"
+                                     ToggledIcon="@Icons.Material.Filled.Power"
+                                     ToggledColor="Color.Success"
+                                     OnToggled="ToggleLed"
+                                     title="@(IsLedOn ? "Turn Off" : "Turn On")" />
+
+                <div style="transition: width 0.5s ease; overflow: hidden; width: @(IsLedOn ? "200px" : "0"); margin-left: 20px;">
+                    @if (IsLedOn)
+                    {
+                        <MudSlider @bind-Value="LedIntensity"
+                                   Min="0" Max="100"
+                                   Step="1"
+                                   ValueLabelFormat="{0}%"
+                                   ValueLabel="true"
+                                   Color="Color.Primary"
+                                   Label="LED Intensity"
+                                   Class="custom-slider" />
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- 기본 값 또는 실시간 데이터가 차트로 표시됨 -->
+        <MudChart ChartType="ChartType.Line"
+                  ChartSeries="@IlluminanceSeries"
+                  XAxisLabels="@XAxisLabels"
+                  Width="100%" Height="350px" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    public DateTime? Date1 { get; set; } = DateTime.Now.AddDays(-10);
+
+    [Parameter] public string MqttAddress { get; set; } = "your.mqtt.server.address";  // 기본 MQTT 주소
+    [Parameter] public int MqttPort { get; set; } = 1883;  // 기본 MQTT 포트
+    [Parameter]
+    public Dictionary<string, List<string>> MqttTopics { get; set; } = new Dictionary<string, List<string>>
+    {
+        { "east", new List<string> { "east/topic" } },
+        { "west", new List<string> { "west/topic" } },
+        { "south", new List<string> { "south/topic" } },
+        { "north", new List<string> { "north/topic" } },
+        { "led", new List<string> { "led/topic" } }
+    };
+
+    public bool IsLedOn { get; set; } = false;
+    public int LedIntensity { get; set; } = 50;
+
+    // 기본 조도 센서 시리즈 데이터
+    [Parameter]
+    public List<ChartSeries> IlluminanceSeries { get; set; } = new List<ChartSeries>
+    {
+        new ChartSeries
+        {
+            Name = "Illuminance1 (lux)",
+            Data = new double[] { 1000, 1200, 1100, 1300, 1250 }
+        },
+        new ChartSeries
+        {
+            Name = "Illuminance2 (lux)",
+            Data = new double[] { 1050, 1150, 1180, 1290, 1300 }
+        },
+        new ChartSeries
+        {
+            Name = "Illuminance3 (lux)",
+            Data = new double[] { 950, 1100, 1150, 1250, 1280 }
+        },
+        new ChartSeries
+        {
+            Name = "Illuminance4 (lux)",
+            Data = new double[] { 1020, 1180, 1110, 1340, 1320 }
+        }
+    };
+    [Parameter]
+    public string[] XAxisLabels { get; set; } = { "1 PM", "2 PM", "3 PM", "4 PM", "5 PM" };
+
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    protected override async Task OnInitializedAsync ()
+    {
+        try
+        {
+            MqttService.OnMessageReceived += HandleMqttMessage;
+
+            await MqttService.SubscribeAsync(MqttTopics["east"].First());
+            await MqttService.SubscribeAsync(MqttTopics["west"].First());
+            await MqttService.SubscribeAsync(MqttTopics["south"].First());
+            await MqttService.SubscribeAsync(MqttTopics["north"].First());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MQTT 연결 중 오류: {ex.Message}. 기본 데이터를 사용합니다.");
+            // MQTT 연결 실패 시 기본 데이터를 그대로 사용
+        }
+    }
+
+    private void HandleMqttMessage (string topic, string payload)
+    {
+        try
+        {
+            int value = int.Parse(payload);
+            // 메시지 처리 로직 (센서 데이터 업데이트)
+            InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MQTT 메시지 처리 중 오류: {ex.Message}");
+        }
+    }
+
+    private void Submit () => MudDialog.Close(DialogResult.Ok(true));
+
+    private void Cancel () => MudDialog.Cancel();
+
+    private async Task ToggleLed ()
+    {
+        try
+        {
+            if (IsLedOn)
+            {
+                await MqttService.PublishMessageAsync(MqttTopics["led"].First(), "ON");
+            }
+            else
+            {
+                await MqttService.PublishMessageAsync(MqttTopics["led"].First(), "OFF");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LED 상태 변경 중 오류: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync ()
+    {
+        MqttService.OnMessageReceived -= HandleMqttMessage;
+        if (MqttService.IsConnected)
+        {
+            await MqttService.DisconnectAsync();
+        }
+    }
+}

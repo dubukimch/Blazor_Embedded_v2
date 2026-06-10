@@ -1,0 +1,38 @@
+﻿@page "/add-note"
+@using MudBlazor
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    private string Title { get; set; } = string.Empty;
+    private string Content { get; set; } = string.Empty;
+    private DateTime? SelectedDate { get; set; } = DateTime.Now;
+
+    private void Submit()
+    {
+        if (!string.IsNullOrWhiteSpace(Title) && SelectedDate.HasValue)
+        {
+            var newNote = new Note
+            {
+                Title = Title,
+                Content = Content,
+                Date = SelectedDate.Value
+            };
+            MudDialog.Close(DialogResult.Ok(newNote));
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}
+
+<DialogContent>
+    <MudTextField @bind-Value="Title" Label="Title" Required="true" />
+    <MudTextField @bind-Value="Content" Label="Content" Required="false" />
+    <MudDatePicker @bind-Date="SelectedDate" Label="Select Date" />
+</DialogContent>
+
+<DialogActions>
+    <MudButton Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+    <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+</DialogActions>

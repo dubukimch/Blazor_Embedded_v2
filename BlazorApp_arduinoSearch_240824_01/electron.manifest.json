@@ -1,0 +1,9 @@
+{
+  "executable": "BlazorElectronApp",
+  "splashscreen": {
+    "imageFile": "wwwroot/images/splashscreen.png",
+    "loadingText": "Please wait...",
+    "position": "center"
+  },
+  "singleInstance": true
+}

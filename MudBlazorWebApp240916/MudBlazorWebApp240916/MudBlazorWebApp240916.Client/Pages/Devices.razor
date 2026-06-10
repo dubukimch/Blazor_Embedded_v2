@@ -1,0 +1,271 @@
+﻿@page "/devices"
+@using MudBlazorWebApp240916.Shared.DataModel
+@using System.Net
+@inject NavigationManager NavigationManager
+@inject DeviceDiscoveryService DeviceDiscoveryService
+@inject IServiceProvider Services
+@inject IJSRuntime JSRuntime
+@inject IDialogService DialogService
+@inject HttpClient Http
+
+<h3 class="connected-title">연결 가능한 장비 목록</h3>
+@if (availableDevices != null && availableDevices.Any())
+{
+    <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:300px;">
+        <thead>
+            <tr>
+                <th>이름</th>
+                <th>IP 주소</th>
+                <th>설명</th>
+                <th>연결</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var device in availableDevices)
+            {
+                <!-- 부모 디바이스 (Raspberry Pi) 행 -->
+                <tr @onclick="() => ToggleDevice(device)">
+                    <td>
+                        <MudIcon Icon="@((device.IsExpanded ? Icons.Material.Filled.ArrowDropDown : Icons.Material.Filled.ArrowRight))" />
+                        @(string.IsNullOrEmpty(device.Name) ? "알 수 없음" : device.Name)
+                    </td>
+                    <td>@device.Address</td>
+                    <td>@device.Description</td>
+                    <td>
+                        <MudIconButton Icon="@Icons.Material.Filled.Link"
+                                       Color="Color.Primary"
+                                       OnClick="@(async () => await ConnectToDevice(device))"
+                                       Title="연결" />
+                    </td>
+                </tr>
+
+                <!-- 자식 디바이스 (Arduino) 표시 -->
+                @if (device.IsExpanded && device.ConnectedDevices != null && device.ConnectedDevices.Any())
+                {
+                    @foreach (var subDevice in device.ConnectedDevices)
+                    {
+                        <tr>
+                            <td style="padding-left: 20px;">@subDevice.Name</td>
+                            <td>@subDevice.Address</td>
+                            <td>@subDevice.Description</td>
+                            <td>
+                                <MudTreeView T="string">
+                                    <MudTreeViewItem T="string" Text="@subDevice.Name">
+                                        @if (subDevice.MqttTopics != null)
+                                        {
+                                            @foreach (var topicGroup in subDevice.MqttTopics)
+                                            {
+                                                <MudTreeViewItem T="string" Text="@topicGroup.Key">
+                                                    @foreach (var topic in topicGroup.Value)
+                                                    {
+                                                        <MudTreeViewItem T="string" Text="@topic" />
+                                                    }
+                                                </MudTreeViewItem>
+                                            }
+                                        }
+                                    </MudTreeViewItem>
+                                </MudTreeView>
+                            </td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </MudSimpleTable>
+}
+else if (isLoading)
+{
+    <div class="loading-container">
+        <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:300px; width:100%;">
+            <thead>
+                <tr>
+                    <th>이름</th>
+                    <th>IP 주소</th>
+                    <th>설명</th>
+                    <th>연결</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="4" style="text-align:center;">
+                        <p>장비를 검색 중입니다...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </MudSimpleTable>
+    </div>
+}
+else
+{
+    <div class="loading-container">
+        <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:300px; width:100%;">
+            <thead>
+                <tr>
+                    <th>이름</th>
+                    <th>IP 주소</th>
+                    <th>설명</th>
+                    <th>연결</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="4" style="text-align:center;">
+                        <p>연결할 장비가 없습니다...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </MudSimpleTable>
+    </div>
+}
+
+<hr class="divider" />
+
+<h3 class="connected-title">연결된 장비 목록</h3>
+@if (connectedDevices != null && connectedDevices.Any())
+{
+    <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:300px;">
+        <thead>
+            <tr>
+                <th>이름</th>
+                <th>IP 주소</th>
+                <th>설명</th>
+                <th>제어</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var device in connectedDevices)
+            {
+                <!-- 부모 디바이스 (Raspberry Pi) 행 -->
+                <tr @onclick="() => ToggleDevice(device)">
+                    <td>
+                        <MudIcon Icon="@((device.IsExpanded ? Icons.Material.Filled.ArrowDropDown : Icons.Material.Filled.ArrowRight))" />
+                        @(string.IsNullOrEmpty(device.Name) ? "알 수 없음" : device.Name)
+                    </td>
+                    <td>@device.Address</td>
+                    <td>@device.Description</td>
+                    <td>
+                        <MudIconButton Icon="@Icons.Material.Filled.LinkOff"
+                                       Color="Color.Error"
+                                       OnClick="@(async () => await DisconnectFromDevice(device))"
+                                       Title="연결 끊기" />
+                    </td>
+                </tr>
+
+                <!-- 자식 디바이스 (Arduino) 표시 -->
+                @if (device.IsExpanded && device.ConnectedDevices != null && device.ConnectedDevices.Any())
+                {
+                    @foreach (var subDevice in device.ConnectedDevices)
+                    {
+                        <tr>
+                            <td style="padding-left: 20px;">@subDevice.Name</td>
+                            <td>@subDevice.Address</td>
+                            <td>@subDevice.Description</td>
+                            <td>
+                                <!-- 연결된 장비 목록에서는 제어 버튼 활성화 -->
+                                <MudIconButton Icon="@Icons.Material.Filled.Settings"
+                                               Color="Color.Secondary"
+                                               Disabled="false"
+                                               OnClick="@(async () => await OpenLedControlDialog(subDevice))"
+                                               Title="제어" />
+                            </td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </MudSimpleTable>
+}
+else
+{
+    <div class="loading-container">
+        <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:300px; width:100%;">
+            <thead>
+                <tr>
+                    <th>이름</th>
+                    <th>IP 주소</th>
+                    <th>설명</th>
+                    <th>제어</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="4" style="text-align:center;">
+                        <p>연결된 장비가 없습니다...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </MudSimpleTable>
+    </div>
+}
+
+@code {
+    private List<Device> availableDevices;
+    private List<Device> connectedDevices = new List<Device>();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync ()
+    {
+        availableDevices = await DeviceDiscoveryService.DiscoverDevicesAsync();
+        isLoading = false;
+    }
+
+    private void ToggleDevice (Device device)
+    {
+        device.IsExpanded = !device.IsExpanded;
+    }
+
+    private async Task ConnectToDevice (Device device)
+    {
+        connectedDevices.Add(device);
+        availableDevices.Remove(device);
+    }
+
+    private async Task DisconnectFromDevice (Device device)
+    {
+        connectedDevices.Remove(device);
+        availableDevices.Add(device);
+    }
+
+    private async Task OpenLedControlDialog (Device device)
+    {
+        var parameters = new DialogParameters
+        {
+            { "MqttAddress", device.MqttServer },
+            { "IpAddress", device.Address },
+            { "MqttPort", int.Parse(device.MqttPort) },
+            { "MqttTopics", device.MqttTopics }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<LedControlComponent>("LED Control", parameters, options);
+    }
+}
+
+<style>
+    .loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 300px;
+        width: 100%;
+    }
+
+    .divider {
+        margin: 20px 0;
+        border: none;
+        height: 2px;
+        background-color: #ccc;
+    }
+
+    .connected-title {
+        margin-bottom: 20px;
+    }
+
+    .ellipsis-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        max-width: 200px;
+    }
+</style>
