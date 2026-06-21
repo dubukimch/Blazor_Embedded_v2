@@ -3,13 +3,16 @@
 @inject DeviceDiscoveryService DeviceDiscoveryService
 @inject IHttpClientFactory HttpClientFactory
 @inject MqttService MqttService
-@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@using System.Globalization
+@using System.Net
+@using System.Net.Sockets
 @using System.Text
 @using System.Text.Json
 
 <PageTitle>Devices</PageTitle>
 
-<h3>연결 가능한 장비 목록</h3>
+<h3>Connected Devices</h3>
 
 @if (!string.IsNullOrWhiteSpace(mqttStatus))
 {
@@ -19,11 +22,13 @@
 @if (isLoading)
 {
     <div class="mb-3">
-        <p>장비를 검색 중입니다... @discoveryProgress.Message</p>
+        <p>Searching for devices... @discoveryProgress.Message</p>
         <progress class="w-100" max="@ProgressMax" value="@discoveryProgress.Scanned"></progress>
         @if (!string.IsNullOrWhiteSpace(discoveryProgress.CurrentIpAddress))
         {
-            <p class="small text-muted">최근 검색 IP: @discoveryProgress.CurrentIpAddress / 발견: @discoveryProgress.Found</p>
+            <p class="small text-muted">
+                Current IP: @discoveryProgress.CurrentIpAddress / Found: @discoveryProgress.Found
+            </p>
         }
     </div>
 }
@@ -32,13 +37,13 @@ else if (devices.Any())
     <table class="table align-middle">
         <thead>
             <tr>
-                <th>이름</th>
-                <th>IP 주소</th>
-                <th>설명</th>
-                <th>MQTT 서버</th>
-                <th>MQTT 포트</th>
-                <th>MQTT 토픽</th>
-                <th>연결</th>
+                <th>Name</th>
+                <th>IP Address</th>
+                <th>Description</th>
+                <th>MQTT Server</th>
+                <th>MQTT Port</th>
+                <th>MQTT Topic</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -46,31 +51,31 @@ else if (devices.Any())
             {
                 var deviceKey = GetDeviceKey(device);
                 <tr>
-                    <td>@DisplayValue(device.Name, "알 수 없음")</td>
+                    <td>@DisplayValue(device.Name, "Unknown")</td>
                     <td>@device.Address</td>
                     <td>@DisplayValue(device.Description, "-")</td>
                     <td>
                         @if (!device.HasError)
                         {
-                            <input class="form-control form-control-sm" type="text" placeholder="MQTT 서버" @bind="@device.MqttServer" />
+                            <input class="form-control form-control-sm" type="text" placeholder="MQTT server" @bind="@device.MqttServer" />
                         }
                     </td>
                     <td>
                         @if (!device.HasError)
                         {
-                            <input class="form-control form-control-sm" type="text" placeholder="MQTT 포트" @bind="@device.MqttPort" />
+                            <input class="form-control form-control-sm" type="text" placeholder="1883" @bind="@device.MqttPort" />
                         }
                     </td>
                     <td>
                         @if (!device.HasError)
                         {
-                            <input class="form-control form-control-sm" type="text" placeholder="MQTT 토픽" @bind="@device.MqttTopic" />
+                            <input class="form-control form-control-sm" type="text" placeholder="MQTT topic" @bind="@device.MqttTopic" />
                         }
                     </td>
                     <td>
                         @if (!device.HasError)
                         {
-                            <button class="btn btn-primary btn-sm" @onclick="() => ConnectToDevice(device)">연결</button>
+                            <button class="btn btn-primary btn-sm" @onclick="() => ConnectToDevice(device)">Connect</button>
                             @if (connectionErrors.TryGetValue(deviceKey, out var error))
                             {
                                 <div class="text-danger small mt-1">@error</div>
@@ -78,35 +83,8 @@ else if (devices.Any())
                         }
                         else
                         {
-                            <button class="btn btn-danger btn-sm" disabled>오류 발생</button>
-
+                            <button class="btn btn-danger btn-sm" disabled>Error</button>
                         }
-                    </td>
-                    <td>
-                        <input type="text" placeholder="MQTT 서버" @bind="@device.MqttServer" />
-                    </td>
-                    <td>
-                        <input type="text" placeholder="MQTT 포트" @bind="@device.MqttPort" />
-                    </td>
-                    <td>
-                        @if (device.MqttTopics != null && device.MqttTopics.Any())
-                        {
-                            <MatTreeView TNode="TreeNodeModel"
-                                         RootNode="@device.TopicTreeRootNode"
-                                         GetChildNodesCallback="@((n) => n.Nodes)"
-                                         @bind-SelectedNode="@device.SelectedTopicNode">
-                                <NodeTemplate>
-                                    @context.Name
-                                </NodeTemplate>
-                            </MatTreeView>
-                        }
-                        else
-                        {
-                            <p>아두이노로부터 토픽을 불러오는 중...</p>
-                        }
-                    </td>
-                    <td>
-                        <button class="btn btn-success" @onclick="() => ConnectToDevice(device)" disabled="@(!device.MqttTopics?.Any() ?? true)">연결</button>
                     </td>
                 </tr>
             }
@@ -115,7 +93,7 @@ else if (devices.Any())
 }
 else
 {
-    <p>장비를 찾을 수 없습니다.</p>
+    <p>No devices found.</p>
 }
 
 @code {
@@ -128,8 +106,7 @@ else
 
     private int ProgressMax => Math.Max(1, discoveryProgress.Total);
 
-
-    private void OpenModal ()
+    protected override async Task OnInitializedAsync()
     {
         var progress = new Progress<DeviceDiscoveryProgress>(value =>
         {
@@ -141,20 +118,27 @@ else
             }
         });
 
-        devices = await DeviceDiscoveryService.DiscoverDevicesAsync(progress);
-
-        isLoading = false;
-
-        foreach (var device in devices)
+        try
         {
-            device.MqttServer = GetLocalIPAddress();
-            device.MqttPort = "1883";
+            devices = await DeviceDiscoveryService.DiscoverDevicesAsync(progress);
+            ApplyMqttDefaults(devices);
+        }
+        catch (Exception ex)
+        {
+            mqttStatus = $"Device discovery failed: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
 
-            device.TopicTreeRootNode = GenerateTreeNode(device.MqttTopics);
+            if (!disposed)
+            {
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
-    private TreeNodeModel GenerateTreeNode (Dictionary<string, List<string>> mqttTopics)
+    private async Task ConnectToDevice(Device device)
     {
         var deviceKey = GetDeviceKey(device);
         connectionErrors.Remove(deviceKey);
@@ -164,6 +148,10 @@ else
         {
             return;
         }
+
+        device.MqttServer = device.MqttServer.Trim();
+        device.MqttPort = mqttPort.ToString(CultureInfo.InvariantCulture);
+        device.MqttTopic = device.MqttTopic.Trim();
 
         var connected = await MqttService.ConnectAsync(device.MqttServer, mqttPort, device.MqttTopic);
         mqttStatus = MqttService.LastStatus;
@@ -179,21 +167,15 @@ else
             return;
         }
 
-        var url = device.Name switch
-        {
-            "Arduino LED Controller" => BuildDeviceUrl("/ledControl", device, mqttPort),
-            "DHZ Sensor" => BuildDeviceUrl("/DHZChart", device, mqttPort),
-            "Soil Moisture Sensor" => BuildDeviceUrl("/soilMoistureChart", device, mqttPort),
-            _ => string.Empty
-        };
+        var route = ResolveDeviceRoute(device);
 
-        if (string.IsNullOrWhiteSpace(url))
+        if (string.IsNullOrWhiteSpace(route))
         {
-            connectionErrors[deviceKey] = $"지원하지 않는 장치 유형입니다: {DisplayValue(device.Name, "알 수 없음")}";
+            connectionErrors[deviceKey] = $"Unsupported device type: {DisplayValue(device.Name, "Unknown")}";
             return;
         }
 
-        await JSRuntime.InvokeVoidAsync("openInNewTab", url);
+        NavigationManager.NavigateTo(BuildDeviceUrl(route, device, mqttPort));
     }
 
     private bool TryValidateMqtt(Device device, out int mqttPort)
@@ -203,19 +185,20 @@ else
 
         if (string.IsNullOrWhiteSpace(device.MqttServer))
         {
-            connectionErrors[deviceKey] = "MQTT 서버를 입력하세요.";
+            connectionErrors[deviceKey] = "MQTT server is required.";
             return false;
         }
 
-        if (!int.TryParse(device.MqttPort, out mqttPort) || mqttPort is < 1 or > 65535)
+        if (!int.TryParse(device.MqttPort, NumberStyles.Integer, CultureInfo.InvariantCulture, out mqttPort) ||
+            mqttPort is < 1 or > 65535)
         {
-            connectionErrors[deviceKey] = "MQTT 포트는 1부터 65535 사이의 숫자여야 합니다.";
+            connectionErrors[deviceKey] = "MQTT port must be a number between 1 and 65535.";
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(device.MqttTopic))
         {
-            connectionErrors[deviceKey] = "MQTT 토픽을 입력하세요.";
+            connectionErrors[deviceKey] = "MQTT topic is required.";
             return false;
         }
 
@@ -236,31 +219,72 @@ else
             var jsonString = JsonSerializer.Serialize(jsonData);
             using var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
 
-            var response = await httpClient.PostAsync($"http://{device.Address}/configure_mqtt", content);
+            using var response = await httpClient.PostAsync($"http://{device.Address}/configure_mqtt", content);
 
             if (response.IsSuccessStatusCode)
             {
                 return true;
             }
 
-            connectionErrors[deviceKey] = $"MQTT 설정 전송 실패: HTTP {(int)response.StatusCode}";
+            connectionErrors[deviceKey] = $"MQTT configuration failed: HTTP {(int)response.StatusCode}";
             return false;
         }
         catch (Exception ex)
         {
-            connectionErrors[deviceKey] = $"MQTT 설정 전송 실패: {ex.Message}";
+            connectionErrors[deviceKey] = $"MQTT configuration failed: {ex.Message}";
             return false;
         }
     }
 
-    private static string BuildDeviceUrl(string path, Device device, int mqttPort)
+    private void ApplyMqttDefaults(IEnumerable<Device> discoveredDevices)
     {
-        return $"{path}?mqttAddress={Uri.EscapeDataString(device.MqttServer)}&mqttPort={mqttPort}&mqttTopic={Uri.EscapeDataString(device.MqttTopic)}";
+        var defaultServer = GetLocalIPAddress();
+
+        foreach (var device in discoveredDevices.Where(device => !device.HasError))
+        {
+            if (string.IsNullOrWhiteSpace(device.MqttServer))
+            {
+                device.MqttServer = defaultServer;
+            }
+
+            if (string.IsNullOrWhiteSpace(device.MqttPort))
+            {
+                device.MqttPort = "1883";
+            }
+        }
+    }
+
+    private static string BuildDeviceUrl(string route, Device device, int mqttPort)
+    {
+        return $"{route}?mqttAddress={Uri.EscapeDataString(device.MqttServer)}&mqttPort={mqttPort}&mqttTopic={Uri.EscapeDataString(device.MqttTopic)}";
+    }
+
+    private static string ResolveDeviceRoute(Device device)
+    {
+        var name = device.Name ?? string.Empty;
+
+        if (name.Contains("LED", StringComparison.OrdinalIgnoreCase))
+        {
+            return "/ledControl";
+        }
+
+        if (name.Contains("DHZ", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("DHT", StringComparison.OrdinalIgnoreCase))
+        {
+            return "/DHZChart";
+        }
+
+        if (name.Contains("Soil", StringComparison.OrdinalIgnoreCase))
+        {
+            return "/soilMoistureChart";
+        }
+
+        return string.Empty;
     }
 
     private static string GetDeviceKey(Device device)
     {
-        return string.IsNullOrWhiteSpace(device.Address) ? device.Name : device.Address;
+        return string.IsNullOrWhiteSpace(device.Address) ? DisplayValue(device.Name, "unknown") : device.Address;
     }
 
     private static string DisplayValue(string? value, string fallback)
@@ -268,18 +292,24 @@ else
         return string.IsNullOrWhiteSpace(value) ? fallback : value;
     }
 
+    private static string GetLocalIPAddress()
+    {
+        try
+        {
+            var host = Dns.GetHostName();
+            var ip = Dns.GetHostAddresses(host)
+                .FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(address));
+
+            return ip?.ToString() ?? "localhost";
+        }
+        catch
+        {
+            return "localhost";
+        }
+    }
+
     public void Dispose()
     {
         disposed = true;
-
-    }
-
-    private string GetLocalIPAddress ()
-    {
-        var host = Dns.GetHostName();
-        var ip = Dns.GetHostAddresses(host)
-    .FirstOrDefault(i => i.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-
-        return ip?.ToString() ?? "localhost";
     }
 }

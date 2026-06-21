@@ -1,6 +1,8 @@
 using BlazorApp_arduinoSearch_240824_01.Configuration;
 using BlazorApp_arduinoSearch_240824_01.Data;
 using BlazorApp_arduinoSearch_240824_01.Services;
+using ElectronNET.API;
+using ElectronNET.API.Entities;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,7 +38,7 @@ app.MapFallbackToPage("/_Host");
 // Electron Bootstrapping
 if (HybridSupport.IsElectronActive)
 {
-    Task.Run(async () =>
+    _ = Task.Run(async () =>
     {
         var window = await Electron.WindowManager.CreateWindowAsync(new BrowserWindowOptions
         {

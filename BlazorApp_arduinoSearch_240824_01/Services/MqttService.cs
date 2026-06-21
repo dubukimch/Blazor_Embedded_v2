@@ -29,14 +29,14 @@ public sealed class MqttService : IDisposable
         _client.ConnectedAsync += async _ =>
         {
             await SubscribeCurrentTopic();
-            SetStatus($"Connected to MQTT broker {_server}:{_port}.");
+            SetStatus($"Connected to MQTT broker {_server}:{_port}.", clearError: true);
         };
 
         _client.DisconnectedAsync += async _ =>
         {
             if (_disposed || _disconnectRequested)
             {
-                SetStatus("Disconnected from MQTT broker.");
+                SetStatus("Disconnected from MQTT broker.", clearError: true);
                 return;
             }
 
@@ -73,23 +73,24 @@ public sealed class MqttService : IDisposable
         string topic,
         CancellationToken cancellationToken = default)
     {
+        server = server.Trim();
+        topic = topic.Trim();
+
         if (string.IsNullOrWhiteSpace(server))
         {
-            SetError("MQTT 서버 주소가 비어 있습니다.");
+            SetError("MQTT server address is required.");
             return false;
-
         }
-    }
 
         if (port is < 1 or > 65535)
         {
-            SetError("MQTT 포트는 1부터 65535 사이여야 합니다.");
+            SetError("MQTT port must be between 1 and 65535.");
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(topic))
         {
-            SetError("MQTT 토픽이 비어 있습니다.");
+            SetError("MQTT topic is required.");
             return false;
         }
 
@@ -99,7 +100,7 @@ public sealed class MqttService : IDisposable
         {
             if (_client.IsConnected && _server == server && _port == port && _topic == topic)
             {
-                SetStatus($"Already connected to MQTT broker {server}:{port}.");
+                SetStatus($"Already connected to MQTT broker {server}:{port}.", clearError: true);
                 return true;
             }
 
@@ -123,7 +124,7 @@ public sealed class MqttService : IDisposable
         }
         catch (Exception ex)
         {
-            SetError($"MQTT 연결 실패: {ex.Message}");
+            SetError($"MQTT connection failed: {ex.Message}");
             return false;
         }
         finally
@@ -140,13 +141,15 @@ public sealed class MqttService : IDisposable
     {
         if (!_client.IsConnected)
         {
-            SetError("MQTT 브로커에 연결되어 있지 않습니다.");
+            SetError("MQTT broker is not connected.");
             return false;
         }
 
+        topic = topic.Trim();
+
         if (string.IsNullOrWhiteSpace(topic))
         {
-            SetError("발행할 MQTT 토픽이 비어 있습니다.");
+            SetError("MQTT publish topic is required.");
             return false;
         }
 
@@ -160,12 +163,12 @@ public sealed class MqttService : IDisposable
                 .Build();
 
             await _client.PublishAsync(mqttMessage, cancellationToken);
-            SetStatus($"Published message to {topic}.");
+            SetStatus($"Published message to {topic}.", clearError: true);
             return true;
         }
         catch (Exception ex)
         {
-            SetError($"MQTT 발행 실패: {ex.Message}");
+            SetError($"MQTT publish failed: {ex.Message}");
             return false;
         }
     }
@@ -192,7 +195,7 @@ public sealed class MqttService : IDisposable
         }
         catch (Exception ex)
         {
-            SetError($"MQTT 구독 실패: {ex.Message}");
+            SetError($"MQTT subscribe failed: {ex.Message}");
         }
     }
 
@@ -200,7 +203,7 @@ public sealed class MqttService : IDisposable
     {
         if (_lastClientOptions == null)
         {
-            SetError("재연결할 MQTT 연결 정보가 없습니다.");
+            SetError("MQTT reconnect options are not available.");
             return;
         }
 
@@ -210,7 +213,7 @@ public sealed class MqttService : IDisposable
             {
                 await Task.Delay(Math.Max(0, _connectionOptions.ReconnectDelayMilliseconds));
                 await _client.ConnectAsync(_lastClientOptions);
-                SetStatus($"Reconnected to MQTT broker {_server}:{_port}.");
+                SetStatus($"Reconnected to MQTT broker {_server}:{_port}.", clearError: true);
                 return;
             }
             catch (Exception ex)
@@ -220,11 +223,16 @@ public sealed class MqttService : IDisposable
             }
         }
 
-        SetError("MQTT 재연결 횟수를 초과했습니다.");
+        SetError("MQTT reconnect attempts were exhausted.");
     }
 
-    private void SetStatus(string status)
+    private void SetStatus(string status, bool clearError = false)
     {
+        if (clearError)
+        {
+            LastError = string.Empty;
+        }
+
         LastStatus = status;
         OnStatusChanged?.Invoke(status);
     }
@@ -233,15 +241,5 @@ public sealed class MqttService : IDisposable
     {
         LastError = error;
         SetStatus(error);
-
     }
-}
-
-// DeviceInfoResponse 클래스 정의
-public class DeviceInfoResponse
-{
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public string Address { get; set; }
-    public Dictionary<string, string> Topics { get; set; }
 }

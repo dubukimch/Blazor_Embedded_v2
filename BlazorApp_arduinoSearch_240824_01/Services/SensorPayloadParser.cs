@@ -6,9 +6,24 @@ namespace BlazorApp_arduinoSearch_240824_01.Services;
 
 public static class SensorPayloadParser
 {
-    private static readonly string[] TemperatureNames = ["temperature", "temp"];
-    private static readonly string[] HumidityNames = ["humidity", "humid"];
-    private static readonly string[] SoilMoistureNames = ["soil_moisture", "soilMoisture", "moisture"];
+    private static readonly HashSet<string> TemperatureNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "temperature",
+        "temp"
+    };
+
+    private static readonly HashSet<string> HumidityNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "humidity",
+        "humid"
+    };
+
+    private static readonly HashSet<string> SoilMoistureNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "soil_moisture",
+        "soilMoisture",
+        "moisture"
+    };
 
     public static bool TryParseDhz(
         string payload,
@@ -97,7 +112,7 @@ public static class SensorPayloadParser
 
     private static bool TryReadSingle(
         JsonElement root,
-        IReadOnlyCollection<string> names,
+        IReadOnlySet<string> names,
         string displayName,
         out float value,
         out string errorMessage)
@@ -131,7 +146,7 @@ public static class SensorPayloadParser
 
     private static bool TryReadInt32(
         JsonElement root,
-        IReadOnlyCollection<string> names,
+        IReadOnlySet<string> names,
         string displayName,
         out int value,
         out string errorMessage)
@@ -152,33 +167,55 @@ public static class SensorPayloadParser
 
         if (property.ValueKind == JsonValueKind.Number &&
             property.TryGetDouble(out var doubleValue) &&
-            double.IsFinite(doubleValue) &&
-            doubleValue >= int.MinValue &&
-            doubleValue <= int.MaxValue &&
-            Math.Abs(doubleValue - Math.Round(doubleValue)) < 0.0001)
+            TryConvertWholeNumber(doubleValue, out value))
         {
-            value = (int)Math.Round(doubleValue);
             return true;
         }
 
-        if (property.ValueKind == JsonValueKind.String &&
-            int.TryParse(property.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+        if (property.ValueKind == JsonValueKind.String)
         {
-            return true;
+            var text = property.GetString();
+
+            if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+            {
+                return true;
+            }
+
+            if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedDouble) &&
+                TryConvertWholeNumber(parsedDouble, out value))
+            {
+                return true;
+            }
         }
 
         errorMessage = $"Sensor payload has an invalid {displayName} value.";
         return false;
     }
 
+    private static bool TryConvertWholeNumber(double doubleValue, out int value)
+    {
+        value = 0;
+
+        if (!double.IsFinite(doubleValue) ||
+            doubleValue < int.MinValue ||
+            doubleValue > int.MaxValue ||
+            Math.Abs(doubleValue - Math.Round(doubleValue)) >= 0.0001)
+        {
+            return false;
+        }
+
+        value = (int)Math.Round(doubleValue);
+        return true;
+    }
+
     private static bool TryFindProperty(
         JsonElement root,
-        IReadOnlyCollection<string> names,
+        IReadOnlySet<string> names,
         out JsonElement value)
     {
         foreach (var property in root.EnumerateObject())
         {
-            if (names.Any(name => string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase)))
+            if (names.Contains(property.Name))
             {
                 value = property.Value;
                 return true;

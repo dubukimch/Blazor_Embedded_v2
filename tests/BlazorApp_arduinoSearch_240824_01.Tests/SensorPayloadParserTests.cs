@@ -46,6 +46,26 @@ public class SensorPayloadParserTests
     }
 
     [Fact]
+    public void TryParseSoilMoisture_ParsesCaseInsensitiveAliasesAndWholeNumberString()
+    {
+        const string payload = """
+            {
+              "Temp": "21.5",
+              "HUMID": "44.5",
+              "Moisture": "615.0"
+            }
+            """;
+
+        var result = SensorPayloadParser.TryParseSoilMoisture(payload, out var reading, out var errorMessage);
+
+        Assert.True(result, errorMessage);
+        Assert.Equal(21.5f, reading.Temperature);
+        Assert.Equal(44.5f, reading.Humidity);
+        Assert.Equal(615, reading.SoilMoisture);
+        Assert.Empty(errorMessage);
+    }
+
+    [Fact]
     public void TryParseDhz_ParsesTemperatureAndHumidity()
     {
         const string payload = """
@@ -69,6 +89,7 @@ public class SensorPayloadParserTests
     [InlineData("{not-json}", "valid JSON")]
     [InlineData("""{"temperature": 20}""", "humidity")]
     [InlineData("""{"temperature": 20, "humidity": 40, "soil_moisture": "wet"}""", "soil moisture")]
+    [InlineData("""{"temperature": 20, "humidity": 40, "soil_moisture": "615.5"}""", "soil moisture")]
     public void TryParseSoilMoisture_RejectsInvalidPayloads(string payload, string expectedError)
     {
         var result = SensorPayloadParser.TryParseSoilMoisture(payload, out _, out var errorMessage);

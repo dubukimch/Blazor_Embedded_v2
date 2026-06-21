@@ -28,15 +28,8 @@
     private string errorMessage = string.Empty;
     private bool isReady;
 
-
-    private int[] morningData = new int[4];    // 동, 서, 남, 북 조도센서 아침 값
-    private int[] afternoonData = new int[4];  // 동, 서, 남, 북 조도센서 점심 값
-    private int[] eveningData = new int[4];    // 동, 서, 남, 북 조도센서 저녁 값
-
     protected override async Task OnInitializedAsync ()
     {
-        MqttService.OnMessageReceived += HandleMqttMessage;
-
         if (!TryReadMqttQuery())
         {
             return;
@@ -48,7 +41,10 @@
         if (!isReady)
         {
             errorMessage = MqttService.LastError;
+            return;
         }
+
+        MqttService.OnMessageReceived += HandleMqttMessage;
     }
 
     private bool TryReadMqttQuery()
@@ -82,7 +78,10 @@
         if (!published)
         {
             errorMessage = MqttService.LastError;
+            return;
         }
+
+        errorMessage = string.Empty;
     }
 
     private void HandleMqttMessage(string topic, string message)

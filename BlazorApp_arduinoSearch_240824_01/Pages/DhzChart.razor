@@ -33,8 +33,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        MqttService.OnMessageReceived += HandleMqttMessage;
-
         if (!TryReadMqttQuery())
         {
             return;
@@ -46,7 +44,10 @@
         if (!connected)
         {
             errorMessage = MqttService.LastError;
+            return;
         }
+
+        MqttService.OnMessageReceived += HandleMqttMessage;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

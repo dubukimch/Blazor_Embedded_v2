@@ -20,16 +20,16 @@ public class MqttQueryStringParserTests
     }
 
     [Theory]
-    [InlineData("https://localhost/chart?mqttPort=1883&mqttTopic=sensors/soil", "서버")]
-    [InlineData("https://localhost/chart?mqttAddress=broker.local&mqttPort=0&mqttTopic=sensors/soil", "포트")]
-    [InlineData("https://localhost/chart?mqttAddress=broker.local&mqttPort=70000&mqttTopic=sensors/soil", "포트")]
-    [InlineData("https://localhost/chart?mqttAddress=broker.local&mqttPort=1883", "토픽")]
+    [InlineData("https://localhost/chart?mqttPort=1883&mqttTopic=sensors/soil", "server")]
+    [InlineData("https://localhost/chart?mqttAddress=broker.local&mqttPort=0&mqttTopic=sensors/soil", "port")]
+    [InlineData("https://localhost/chart?mqttAddress=broker.local&mqttPort=70000&mqttTopic=sensors/soil", "port")]
+    [InlineData("https://localhost/chart?mqttAddress=broker.local&mqttPort=1883", "topic")]
     public void TryParse_RejectsMissingOrInvalidParameters(string uri, string expectedError)
     {
         var result = MqttQueryStringParser.TryParse(uri, out var parameters, out var errorMessage);
 
         Assert.False(result);
-        Assert.Contains(expectedError, errorMessage);
+        Assert.Contains(expectedError, errorMessage, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(string.Empty, parameters.Server);
         Assert.Equal(0, parameters.Port);
         Assert.Equal(string.Empty, parameters.Topic);

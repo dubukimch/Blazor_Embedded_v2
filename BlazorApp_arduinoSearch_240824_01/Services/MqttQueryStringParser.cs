@@ -16,7 +16,7 @@ public static class MqttQueryStringParser
 
         if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri))
         {
-            errorMessage = "MQTT 연결 주소가 올바르지 않습니다.";
+            errorMessage = "MQTT connection URL is invalid.";
             return false;
         }
 
@@ -27,20 +27,20 @@ public static class MqttQueryStringParser
 
         if (string.IsNullOrWhiteSpace(server))
         {
-            errorMessage = "MQTT 서버 주소가 없습니다.";
+            errorMessage = "MQTT server address is required.";
             return false;
         }
 
         if (!int.TryParse(portText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var port) ||
             port is < 1 or > 65535)
         {
-            errorMessage = "MQTT 포트가 올바르지 않습니다.";
+            errorMessage = "MQTT port must be between 1 and 65535.";
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(topic))
         {
-            errorMessage = "MQTT 토픽이 없습니다.";
+            errorMessage = "MQTT topic is required.";
             return false;
         }
 
