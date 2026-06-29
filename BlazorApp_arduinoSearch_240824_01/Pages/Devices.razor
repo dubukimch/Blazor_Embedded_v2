@@ -10,43 +10,58 @@
 @using System.Text
 @using System.Text.Json
 
-<PageTitle>Devices</PageTitle>
+<PageTitle>Devices - Embedded IoT</PageTitle>
 
-<h3>Connected Devices</h3>
+<div class="container mt-4">
+    <h3 class="mb-4">
+        <span class="oi oi-list-rich me-2" aria-hidden="true"></span>
+        연결된 장치
+    </h3>
 
-@if (!string.IsNullOrWhiteSpace(mqttStatus))
-{
-    <p class="text-muted">@mqttStatus</p>
-}
+    @if (!string.IsNullOrWhiteSpace(mqttStatus))
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            @mqttStatus
+            <button type="button" class="btn-close" @onclick="() => mqttStatus = string.Empty"></button>
+        </div>
+    }
 
-@if (isLoading)
-{
-    <div class="mb-3">
-        <p>Searching for devices... @discoveryProgress.Message</p>
-        <progress class="w-100" max="@ProgressMax" value="@discoveryProgress.Scanned"></progress>
-        @if (!string.IsNullOrWhiteSpace(discoveryProgress.CurrentIpAddress))
-        {
-            <p class="small text-muted">
-                Current IP: @discoveryProgress.CurrentIpAddress / Found: @discoveryProgress.Found
-            </p>
-        }
-    </div>
-}
-else if (devices.Any())
-{
-    <table class="table align-middle">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>IP Address</th>
-                <th>Description</th>
-                <th>MQTT Server</th>
-                <th>MQTT Port</th>
-                <th>MQTT Topic</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
+    @if (isLoading)
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="mb-3">
+                    <p class="mb-2">
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        장치 검색 중... @discoveryProgress.Message
+                    </p>
+                    <progress class="w-100" max="@ProgressMax" value="@discoveryProgress.Scanned"></progress>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(discoveryProgress.CurrentIpAddress))
+                {
+                    <p class="small text-muted mb-0">
+                        현재 IP: @discoveryProgress.CurrentIpAddress / 발견됨: @discoveryProgress.Found
+                    </p>
+                }
+            </div>
+        </div>
+    }
+    else if (devices.Any())
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>장치명</th>
+                        <th>IP 주소</th>
+                        <th>설명</th>
+                        <th>MQTT 서버</th>
+                        <th>MQTT 포트</th>
+                        <th>MQTT 토픽</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody>
             @foreach (var device in devices)
             {
                 var deviceKey = GetDeviceKey(device);
@@ -63,7 +78,7 @@ else if (devices.Any())
                     <td>
                         @if (!device.HasError)
                         {
-                            <input class="form-control form-control-sm" type="text" placeholder="1883" @bind="@device.MqttPort" />
+                            <input class="form-control form-control-sm" type="number" min="1" max="65535" placeholder="1883" @bind="@device.MqttPort" />
                         }
                     </td>
                     <td>
@@ -75,7 +90,18 @@ else if (devices.Any())
                     <td>
                         @if (!device.HasError)
                         {
-                            <button class="btn btn-primary btn-sm" @onclick="() => ConnectToDevice(device)">Connect</button>
+                            var isConfiguring = configuringDevices.Contains(deviceKey);
+                            <button class="btn btn-primary btn-sm" disabled="@isConfiguring" @onclick="() => ConnectToDevice(device)">
+                                @if (isConfiguring)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Configuring...</span>
+                                }
+                                else
+                                {
+                                    <span>Connect</span>
+                                }
+                            </button>
                             @if (connectionErrors.TryGetValue(deviceKey, out var error))
                             {
                                 <div class="text-danger small mt-1">@error</div>
@@ -88,16 +114,22 @@ else if (devices.Any())
                     </td>
                 </tr>
             }
-        </tbody>
-    </table>
-}
-else
-{
-    <p>No devices found.</p>
-}
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning" role="alert">
+            <span class="oi oi-info me-2" aria-hidden="true"></span>
+            발견된 장치가 없습니다.
+        </div>
+    }
+</div>
 
 @code {
     private readonly Dictionary<string, string> connectionErrors = new();
+    private readonly HashSet<string> configuringDevices = new();
     private List<Device> devices = new();
     private DeviceDiscoveryProgress discoveryProgress = new();
     private bool isLoading = true;
@@ -149,33 +181,44 @@ else
             return;
         }
 
-        device.MqttServer = device.MqttServer.Trim();
-        device.MqttPort = mqttPort.ToString(CultureInfo.InvariantCulture);
-        device.MqttTopic = device.MqttTopic.Trim();
+        configuringDevices.Add(deviceKey);
+        await InvokeAsync(StateHasChanged);
 
-        var connected = await MqttService.ConnectAsync(device.MqttServer, mqttPort, device.MqttTopic);
-        mqttStatus = MqttService.LastStatus;
-
-        if (!connected)
+        try
         {
-            connectionErrors[deviceKey] = MqttService.LastError;
-            return;
-        }
+            device.MqttServer = device.MqttServer.Trim();
+            device.MqttPort = mqttPort.ToString(CultureInfo.InvariantCulture);
+            device.MqttTopic = device.MqttTopic.Trim();
 
-        if (!await ConfigureMqttOnDevice(device, deviceKey))
+            var connected = await MqttService.ConnectAsync(device.MqttServer, mqttPort, device.MqttTopic);
+            mqttStatus = MqttService.LastStatus;
+
+            if (!connected)
+            {
+                connectionErrors[deviceKey] = MqttService.LastError;
+                return;
+            }
+
+            if (!await ConfigureMqttOnDevice(device, deviceKey))
+            {
+                return;
+            }
+
+            var route = ResolveDeviceRoute(device);
+
+            if (string.IsNullOrWhiteSpace(route))
+            {
+                connectionErrors[deviceKey] = $"Unsupported device type: {DisplayValue(device.Name, "Unknown")}";
+                return;
+            }
+
+            NavigationManager.NavigateTo(BuildDeviceUrl(route, device, mqttPort));
+        }
+        finally
         {
-            return;
+            configuringDevices.Remove(deviceKey);
+            await InvokeAsync(StateHasChanged);
         }
-
-        var route = ResolveDeviceRoute(device);
-
-        if (string.IsNullOrWhiteSpace(route))
-        {
-            connectionErrors[deviceKey] = $"Unsupported device type: {DisplayValue(device.Name, "Unknown")}";
-            return;
-        }
-
-        NavigationManager.NavigateTo(BuildDeviceUrl(route, device, mqttPort));
     }
 
     private bool TryValidateMqtt(Device device, out int mqttPort)
@@ -313,3 +356,4 @@ else
         disposed = true;
     }
 }
+
