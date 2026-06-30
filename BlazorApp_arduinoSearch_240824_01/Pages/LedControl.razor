@@ -5,20 +5,53 @@
 
 <PageTitle>LED Control</PageTitle>
 
-<h3>LED Control</h3>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h3 class="mb-4">LED 제어</h3>
 
-@if (!string.IsNullOrWhiteSpace(errorMessage))
-{
-    <p class="text-danger">@errorMessage</p>
-}
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @errorMessage
+                    <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+                </div>
+            }
 
-@if (!string.IsNullOrWhiteSpace(statusMessage))
-{
-    <p class="text-muted">@statusMessage</p>
-}
+            @if (!string.IsNullOrWhiteSpace(statusMessage))
+            {
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    @statusMessage
+                    <button type="button" class="btn-close" @onclick="() => statusMessage = string.Empty"></button>
+                </div>
+            }
 
-<button class="btn btn-success me-2" disabled="@(!isReady)" @onclick="TurnOn">Turn On</button>
-<button class="btn btn-secondary" disabled="@(!isReady)" @onclick="TurnOff">Turn Off</button>
+            <div class="btn-group d-grid gap-2" role="group">
+                <button class="btn btn-success btn-lg" disabled="@(!isReady)" @onclick="TurnOn">
+                    @if (!isReady)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    }
+                    <span class="oi oi-flash me-2" aria-hidden="true"></span>
+                    켜기
+                </button>
+                <button class="btn btn-danger btn-lg" disabled="@(!isReady)" @onclick="TurnOff">
+                    @if (!isReady)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    }
+                    <span class="oi oi-circle-x me-2" aria-hidden="true"></span>
+                    끄기
+                </button>
+            </div>
+
+            @if (!isReady)
+            {
+                <p class="text-muted mt-3 text-center">연결 중...</p>
+            }
+        </div>
+    </div>
+</div>
 
 @code {
     private string mqttAddress = string.Empty;
@@ -86,13 +119,29 @@
 
     private void HandleMqttMessage(string topic, string message)
     {
-        statusMessage = $"Received message on {topic}: {message}";
+        statusMessage = $"{topic}에서 메시지 수신: {message}";
         _ = InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
         MqttService.OnMessageReceived -= HandleMqttMessage;
-
     }
 }
+
+<style>
+    .btn-lg {
+        font-size: 1.2rem;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn-group .btn {
+        flex: 1;
+    }
+</style>
+

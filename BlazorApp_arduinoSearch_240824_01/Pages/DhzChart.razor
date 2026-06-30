@@ -4,22 +4,46 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 
-<PageTitle>DHZ Chart</PageTitle>
+<PageTitle>DHZ Sensor</PageTitle>
 
-<h3>DHZ Sensor</h3>
+<div class="container mt-4">
+    <h3 class="mb-3">DHZ 센서 데이터</h3>
 
-@if (!string.IsNullOrWhiteSpace(errorMessage))
-{
-    <p class="text-danger">@errorMessage</p>
-}
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
 
-@if (!string.IsNullOrWhiteSpace(statusMessage))
-{
-    <p class="text-muted">@statusMessage</p>
-}
+    @if (!string.IsNullOrWhiteSpace(statusMessage))
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = string.Empty"></button>
+        </div>
+    }
 
-<canvas id="dhzTemperatureChart" width="400" height="200"></canvas>
-<canvas id="dhzHumidityChart" width="400" height="200"></canvas>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">온도 (Temperature)</div>
+                <div class="card-body">
+                    <canvas id="dhzTemperatureChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">습도 (Humidity)</div>
+                <div class="card-body">
+                    <canvas id="dhzHumidityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private readonly List<float> temperatureData = new();
@@ -99,7 +123,7 @@
             TrimSeries();
 
             errorMessage = string.Empty;
-            statusMessage = $"Received message on {topic}.";
+            statusMessage = $"{topic}에서 메시지 수신 - 온도: {sensorData.Temperature}°C, 습도: {sensorData.Humidity}%";
             await UpdateCharts();
             StateHasChanged();
         });
@@ -149,3 +173,26 @@
     }
 
 }
+
+<style>
+    .card {
+        border: 1px solid #dee2e6;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    canvas {
+        max-width: 100%;
+    }
+</style>
+
