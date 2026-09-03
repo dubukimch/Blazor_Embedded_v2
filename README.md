@@ -1,88 +1,55 @@
-# Blazor Embedded v2
+# Blazor Embedded — v2 / v3
 
-Arduino·Raspberry Pi의 MQTT 데이터를 Blazor 실시간 차트와 Unity WebGL 디지털 트윈에 동시에 전달하는 .NET 8 기반 IoT 콘솔입니다.
+Arduino·PLC 데이터를 Blazor와 Unity WebGL 디지털트윈으로 표시하는 저장소다. 현재 MQTT 통합 구현은 `v2/`, OPC UA 클라이언트 중심의 다음 설계는 `v3/`에서 관리한다.
 
-## 권장 실행 프로젝트
+## 버전과 현재 상태
 
-통합 앱은 `MudBlazorWebApp240916/MudBlazorWebApp240916.sln`입니다. 나머지 솔루션은 이전 실험과 기능 검증용으로 보존합니다.
-
-```powershell
-dotnet restore MudBlazorWebApp240916\MudBlazorWebApp240916.sln
-dotnet build MudBlazorWebApp240916\MudBlazorWebApp240916.sln -c Release
-dotnet run --project MudBlazorWebApp240916\MudBlazorWebApp240916\MudBlazorWebApp240916\MudBlazorWebApp240916.csproj
-```
-
-실행 후 다음 화면을 사용합니다.
-
-| 경로 | 역할 |
-| --- | --- |
-| `/` | 통합 개요 및 시스템 흐름 |
-| `/Dashboard` | MQTT 연결·발행, SSE 수신, Blazor 실시간 차트 |
-| `/Devices` | Arduino/Raspberry Pi/ESP32 MQTT 모듈 프로필 관리 |
-| `/VirtualFarm` | Unity WebGL, Blazor 차트, 양방향 JS 브리지 |
+| 위치 | 목적 | 2026-09-04 상태 |
+| --- | --- | --- |
+| `v2/` | MQTT 기반 기존 앱과 실험 프로젝트 보존 | 기존 구현, 이번 작업에서 실행 코드는 변경하지 않음 |
+| `v3/` | 외부 OPC UA 서버의 노드를 매핑하는 새 Blazor 솔루션 | 설계 단계. 현재 포함된 앱 코드는 v2 사본이며 새 솔루션은 아직 없음 |
+| `shared/` | 두 버전의 공통 매핑·표시 계약과 Unity 자산 관리 | 문서만 작성됨. 코드 추출·빌드 이동은 후속 구현 |
 
 ## 데이터 흐름
 
-```text
-Arduino / Raspberry Pi
-        │ MQTT publish / subscribe
-        ▼
-ASP.NET Core MqttGateway
-        │ normalized TelemetryEnvelope
-        ├── SSE ──▶ Blazor dashboard chart
-        └── SSE ──▶ unityBridge.js ──▶ Unity BlazorBridge.OnTelemetry
-
-Unity .jslib ──▶ unityBridge.publishFromUnity ──▶ /api/iot/unity ──▶ MQTT + Blazor
-```
-
-브라우저에서는 TCP MQTT나 ICMP Ping을 직접 실행하지 않습니다. 브로커 연결과 장비 네트워크 통신은 서버가 담당하며 브라우저에는 HTTP/SSE만 노출합니다.
-
-## MQTT payload
-
-숫자 하나 또는 평면 JSON 객체를 지원합니다.
+현재 v2:
 
 ```text
-23.8
+Arduino / ESP32 / Raspberry Pi
+  → MQTT broker → ASP.NET Core MqttGateway
+  → TelemetryEnvelope → SSE → Blazor chart / JS bridge → Unity WebGL
 ```
 
-```json
-{
-  "temperature": 23.8,
-  "humidity": 61,
-  "soil": 72
-}
+목표 v3:
+
+```text
+Arduino / PLC → 장비별 수집 프로토콜 → IIoT.Gateway.Solution (OPC UA Server)
+  → v3 ASP.NET Core (OPC UA Client: Browse / Read / Subscribe)
+  → 노드→태그 매핑 → 태그→장면 속성 매핑
+  → SSE → Blazor chart / 공통 JS bridge → 공통 Unity WebGL
 ```
 
-숫자 payload의 지표 이름은 토픽 마지막 segment에서 추출합니다. 예: `farm/a/temperature` → `temperature`.
+MQTT·TCP·UDP·OPC UA가 순차적으로 연결되는 것은 아니다. 현장 수집은 Gateway가 담당하고 v3는 우선 OPC UA로 접근한다. 직접 MQTT/TCP/UDP 연결이 필요한 경우에만 v3 서버 어댑터를 추가한다. Unity는 장비 프로토콜 대신 공통 표시 계약을 처리한다.
 
-## Unity 연동
+## v2 실행
 
-Unity 장면에 이름이 `BlazorBridge`인 GameObject를 두고 아래 메서드를 구현합니다.
+저장소 루트에서 실행한다. 활성 통합 앱은 .NET 8 대상이다.
 
-```csharp
-public void OnTelemetry(string json)
-{
-    // topic, payload, source, receivedAt, values를 역직렬화해 장면에 반영
-}
+```powershell
+dotnet restore v2/MudBlazorWebApp240916/MudBlazorWebApp240916.sln
+dotnet build v2/MudBlazorWebApp240916/MudBlazorWebApp240916.sln -c Release --no-restore
+dotnet run --project v2/MudBlazorWebApp240916/MudBlazorWebApp240916/MudBlazorWebApp240916/MudBlazorWebApp240916.csproj
 ```
 
-Unity에서 Blazor/MQTT로 보내려면 WebGL `.jslib`에서 호출합니다.
+주요 화면은 `/Dashboard`, `/Devices`, `/VirtualFarm`이다. v3 실행 명령은 새 솔루션 생성·검증 후 추가한다.
 
-```javascript
-mergeInto(LibraryManager.library, {
-  PublishTelemetry: function (topicPtr, payloadPtr) {
-    return window.unityBridge.publishFromUnity(
-      UTF8ToString(topicPtr),
-      UTF8ToString(payloadPtr));
-  }
-});
-```
+## 문서
 
-자세한 계약과 운영 기준은 [기술 명세](설계/01_기술명세서.md), [화면 설계](설계/02_와이어프레임.md), [구현 명세](구현/01_구현구조_동작명세.md)를 참고합니다.
+- [v3 시작점과 범위](v3/README.md)
+- [v3 기술 설계](v3/설계/01_기술명세서.md), [화면 설계](v3/설계/02_와이어프레임.md)
+- [OPC UA 연결·노드 매핑](v3/설계/03_OPC_UA_연결_노드매핑.md)
+- [공통 디지털트윈 계약](shared/README.md), [Unity 빌드 경로·배포 설계](shared/unity/README.md)
+- [v3 구현 순서와 완료 조건](v3/개발/개선_작업_목록.md)
+- [기존 v2 구현 명세](v2/구현/01_구현구조_동작명세.md)
 
-## 운영 주의사항
-
-- `/api/iot/*`는 로컬·신뢰 네트워크 운영을 전제로 합니다. 외부 공개 시 인증/권한, TLS 종료, MQTT 자격 증명 비밀 저장을 먼저 추가해야 합니다.
-- 모듈 프로필은 서버의 `App_Data/device-modules.json`에 저장됩니다. 비밀번호는 이 파일에 저장하지 않습니다.
-- 포함된 Unity 빌드는 약 90MB이므로 첫 로드가 느릴 수 있습니다. 파일명에 콘텐츠 해시가 없어 `/Build` 자산도 ETag 재검증 캐시를 사용합니다.
-- 실제 하드웨어 검증에는 별도의 MQTT 브로커와 장비가 필요합니다. 브로커가 없어도 Dashboard의 `샘플 데이터`로 Blazor/SSE 파이프라인을 검사할 수 있습니다.
+v2의 과거 문서에 있는 저장소 상대 명령은 `v2/`를 작업 디렉터리로 해석한다. v3로 복사된 과거 이력은 v3 기능의 구현·검증 증거가 아니다.
