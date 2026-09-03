@@ -1,58 +1,42 @@
-﻿@page "/"
+@page "/"
+@inject NavigationManager Navigation
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Smart Grow · Overview</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Hello, world!</MudText>
-<MudText Class="mb-8">Welcome to your new app, powered by MudBlazor and the .NET 8 Template!</MudText>
+<main class="page-shell">
+    <section class="hero-grid">
+        <div class="hero-copy">
+            <span class="eyebrow">SMART GROW / EDGE OPERATIONS</span>
+            <h1>센서에서 디지털 트윈까지,<br /><em>하나의 데이터 흐름으로.</em></h1>
+            <p>Arduino와 Raspberry Pi의 MQTT 데이터를 서버에서 안전하게 수집하고, Blazor 차트와 Unity WebGL 장면에 동시에 전달합니다.</p>
+            <div class="hero-actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" StartIcon="@Icons.Material.Filled.ShowChart" OnClick="@(() => Navigation.NavigateTo("Dashboard"))">실시간 데이터 보기</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Large" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => Navigation.NavigateTo("Devices"))">장비 모듈 추가</MudButton>
+            </div>
+        </div>
+        <div class="signal-card">
+            <div class="signal-card-head"><span>LIVE PIPELINE</span><i>READY</i></div>
+            <div class="pipeline">
+                <div class="pipeline-node"><b>01</b><span>EDGE</span><strong>Arduino · Pi</strong></div>
+                <div class="pipeline-line"><i></i></div>
+                <div class="pipeline-node"><b>02</b><span>BROKER</span><strong>MQTT Gateway</strong></div>
+                <div class="pipeline-line"><i></i></div>
+                <div class="pipeline-node"><b>03</b><span>EXPERIENCE</span><strong>Blazor · Unity</strong></div>
+            </div>
+            <div class="signal-foot"><span>HTTP + SSE bridge</span><span>QoS 0—2</span><span>JSON / scalar</span></div>
+        </div>
+    </section>
 
-<MudAlert Severity="Severity.Normal">
-    You can find documentation and examples on our website here:
-    <MudLink Href="https://mudblazor.com" Target="_blank" Typo="Typo.body2" Color="Color.Primary">
-        <b>www.mudblazor.com</b>
-    </MudLink>
-</MudAlert>
+    <section class="metric-grid">
+        <article class="metric-card"><span class="metric-icon mint">⌁</span><div><small>TRANSPORT</small><strong>MQTT 3.1.1 / 5</strong><p>브로커 연결은 서버에서 관리</p></div></article>
+        <article class="metric-card"><span class="metric-icon violet">◎</span><div><small>REALTIME</small><strong>Server-Sent Events</strong><p>재연결 가능한 브라우저 스트림</p></div></article>
+        <article class="metric-card"><span class="metric-icon amber">◇</span><div><small>DIGITAL TWIN</small><strong>Unity WebGL Bridge</strong><p>인스턴스 기반 양방향 호출</p></div></article>
+    </section>
 
-<br />
-<MudText Typo="Typo.h5" GutterBottom="true">Interactivity in this Template</MudText>
-<br />
-<MudText Typo="Typo.body2">
-    When you opt for the "Global" Interactivity Location, <br />
-    the render modes are defined in App.razor and consequently apply to all child components.<br />
-    In this case, providers are globally set in the MainLayout.<br />
-    <br />
-    On the other hand, if you choose the "Per page/component" Interactivity Location,<br />
-    it is necessary to include the <br />
-    <br />
-    &lt;MudPopoverProvider /&gt; <br />
-    &lt;MudDialogProvider /&gt; <br />
-    &lt;MudSnackbarProvider /&gt; <br />
-    <br />
-    components on every interactive page.<br />
-    <br />
-    If a render mode is not specified for a page, it defaults to Server-Side Rendering (SSR),<br />
-    similar to this page. While MudBlazor allows pages to be rendered in SSR,<br />
-    please note that interactive features, such as buttons and dropdown menus, will not be functional.
-</MudText>
-
-<br />
-<MudText Typo="Typo.h5" GutterBottom="true">What's New in Blazor with the Release of .NET 8</MudText>
-<br />
-<MudText Typo="Typo.h6" GutterBottom="true">Prerendering</MudText>
-<MudText Typo="Typo.body2" GutterBottom="true">
-    If you're exploring the features of .NET 8 Blazor,<br /> you might be pleasantly surprised to learn that each page is prerendered on the server,<br /> regardless of the selected render mode.<br /><br />
-    This means that you'll need to inject all necessary services on the server,<br /> even when opting for the wasm (WebAssembly) render mode.<br /><br />
-    This prerendering functionality is crucial to ensuring that WebAssembly mode feels fast and responsive,<br /> especially when it comes to initial page load times.<br /><br />
-    For more information on how to detect prerendering and leverage the RenderContext, you can refer to the following link:
-    <MudLink Href="https://github.com/dotnet/aspnetcore/issues/51468#issuecomment-1783568121" Target="_blank" Typo="Typo.body2" Color="Color.Primary">
-        More details
-    </MudLink>
-</MudText>
-
-<br />
-<MudText Typo="Typo.h6" GutterBottom="true">InteractiveAuto</MudText>
-<MudText Typo="Typo.body2">
-    A discussion on how to achieve this can be found here:
-    <MudLink Href="https://github.com/dotnet/aspnetcore/issues/51468#issue-1950424116" Target="_blank" Typo="Typo.body2" Color="Color.Primary">
-        More details
-    </MudLink>
-</MudText>
+    <section class="section-heading"><div><span class="eyebrow">OPERATE</span><h2>필요한 화면으로 바로 이동하세요</h2></div></section>
+    <section class="feature-grid">
+        <button class="feature-card" @onclick="@(() => Navigation.NavigateTo("Dashboard"))"><span>01</span><h3>Live telemetry</h3><p>온도·습도·토양 데이터를 하나의 차트에서 확인하고 MQTT 명령을 발행합니다.</p><b>대시보드 열기 →</b></button>
+        <button class="feature-card" @onclick="@(() => Navigation.NavigateTo("Devices"))"><span>02</span><h3>Device modules</h3><p>Arduino, Raspberry Pi 또는 사용자 정의 보드를 토픽 프로필로 등록합니다.</p><b>모듈 관리 →</b></button>
+        <button class="feature-card" @onclick="@(() => Navigation.NavigateTo("VirtualFarm"))"><span>03</span><h3>Unity digital twin</h3><p>동일한 MQTT 이벤트를 Blazor 차트와 Unity GameObject에 동시에 전달합니다.</p><b>트윈 실행 →</b></button>
+    </section>
+</main>

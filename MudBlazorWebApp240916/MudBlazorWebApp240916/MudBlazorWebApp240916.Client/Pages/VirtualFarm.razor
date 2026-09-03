@@ -1,105 +1,167 @@
-﻿@page "/VirtualFarm"
-@inject IJSRuntime JSRuntime
-@inject IDialogService DialogService
-@inject DialogServiceHandler dialogServiceHandler
-<h3>3D Dashboard</h3>
+@page "/VirtualFarm"
+@implements IAsyncDisposable
+@using System.Text.Json
+@using Microsoft.JSInterop
+@using MudBlazor.Components.Chart.Models
+@using MudBlazorWebApp240916.Client.Services
+@using MudBlazorWebApp240916.Shared.DataModel
+@inject IJSRuntime JS
+@inject IoTApiClient Api
+@inject NavigationManager Navigation
 
-<!-- Unity 크기 조정 입력 필드 -->
-<div>
-    <label for="widthInput">Width: </label>
-    <input id="widthInput" type="number" @bind="width" @oninput="ResizeUnity" />
-    <label for="heightInput">Height: </label>
-    <input id="heightInput" type="number" @bind="height" @oninput="ResizeUnity" />
+<PageTitle>Smart Grow · Unity twin</PageTitle>
 
-    <!-- MudIconButton을 사용한 전체 화면 버튼 -->
-    <MudIconButton Icon="@Icons.Material.Filled.Fullscreen" Color="Color.Secondary" OnClick="SetUnityFullscreen" />
-</div>
+<main class="page-shell twin-page">
+    <header class="page-heading">
+        <div><span class="eyebrow">DIGITAL TWIN</span><h1>Unity WebGL bridge</h1><p>Unity 장면과 Blazor 차트가 동일한 MQTT 스트림을 구독합니다.</p></div>
+        <div class="twin-actions"><div class="status-pill @(_unityReady ? "online" : "offline")"><i></i>@(_unityReady ? "Unity ready" : "Loading Unity")</div><MudIconButton Icon="@Icons.Material.Filled.Fullscreen" Color="Color.Primary" OnClick="SetFullscreenAsync" /></div>
+    </header>
 
-<!-- Unity WebGL 컨테이너 -->
-<div id="unity-container" class="unity-desktop" style="width: @(width); height: @(height);">
-    <canvas id="unity-canvas" width="@width" height="@height"></canvas>
-    <div id="unity-loading-bar" style="display:none;">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-            <div id="unity-progress-bar-full"></div>
-        </div>
-    </div>
-    <div id="unity-warning"></div>
-    <div id="unity-footer">
-        <div id="unity-webgl-logo"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">farmTest240531</div>
-    </div>
-</div>
+    <section class="twin-layout">
+        <article class="unity-frame">
+            <div class="unity-toolbar"><span><i></i> GREENHOUSE / LIVE SCENE</span><small>WebGL 2.0</small></div>
+            <div id="unity-container" class="unity-host">
+                <canvas id="unity-canvas" tabindex="0"></canvas>
+                <div id="unity-loading-bar" class="unity-loading">
+                    <strong>Loading digital twin</strong>
+                    <div class="unity-progress-track"><div id="unity-progress-bar-full"></div></div>
+                    <small>약 90MB의 기존 Unity 빌드를 불러옵니다.</small>
+                </div>
+                <div id="unity-warning"></div>
+            </div>
+        </article>
 
+        <aside class="twin-sidecar">
+            <article class="chart-card compact-chart">
+                <div class="chart-heading"><div><span>BLAZOR OVERLAY</span><h2>Live sensor chart</h2></div><i class="sync-mark">SYNC</i></div>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@_series" XAxisLabels="@_labels" Width="100%" Height="240px" />
+                <div class="mini-kpis"><span>Temp <b>@Value("temperature")°</b></span><span>Humidity <b>@Value("humidity")%</b></span><span>Soil <b>@Value("soil")%</b></span></div>
+            </article>
+
+            <article class="panel-card twin-control-card">
+                <div class="panel-heading"><span>↔</span><div><h2>Bridge control</h2><p>Blazor → MQTT → Unity</p></div></div>
+                <div class="quick-actions">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Warning" OnClick="@(() => SendCommandAsync("farm/led/command", "TOGGLE"))">LED</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Info" OnClick="@(() => SendCommandAsync("farm/water/command", "TOGGLE"))">Water</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="@(() => SendCommandAsync("farm/air/command", "TOGGLE"))">Air</MudButton>
+                </div>
+                <div class="bridge-log"><span>LAST BRIDGE EVENT</span><code>@(_lastMessage?.Topic ?? "waiting for telemetry")</code><p>@(_lastMessage?.Payload ?? "Unity와 Blazor가 연결되면 이벤트가 여기에 표시됩니다.")</p></div>
+            </article>
+
+            @if (!string.IsNullOrWhiteSpace(_activePanel))
+            {
+                <article class="unity-callout"><span>UNITY ACTION</span><strong>@_activePanel 패널 요청</strong><button @onclick="@(() => _activePanel = null)">닫기</button></article>
+            }
+        </aside>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(_feedback))
+    {
+        <div class="toast-inline @(_feedbackSuccess ? "success" : "error")">@_feedback</div>
+    }
+</main>
 
 @code {
-    private int width { get; set; } = 1920; // 기본값
-    private int height { get; set; } = 1080; // 기본값
+    private DotNetObjectReference<VirtualFarm>? _reference;
+    private TelemetryEnvelope? _lastMessage;
+    private readonly Dictionary<string, double> _metrics = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<double> _temperature = [];
+    private List<ChartSeries> _series = [];
+    private string[] _labels = [];
+    private bool _unityReady;
+    private string? _activePanel;
+    private string? _feedback;
+    private bool _feedbackSuccess;
 
-    [JSInvokable("ShowBlazorDialog")]
-    public async Task ShowBlazorDialog (string dialogType)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        switch (dialogType)
+        if (!firstRender) return;
+        _reference = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("unityBridge.initialize", _reference);
+        try
         {
-            case "LedControl":
-                // Dialog 열기
-                await DialogService.ShowAsync<AddNoteDialog>("MemoList");
-                break;
-            case "WaterControl":
-                await DialogService.ShowAsync<AddNoteDialog>("MemoList");
-                break;
-            case "AirControl":
-                await DialogService.ShowAsync<AddNoteDialog>("MemoList");
-                break;
-            case "MemoList":
-                await DialogService.ShowAsync<AddNoteDialog>("MemoList");
-                break;
-            default:
-                Console.WriteLine("Unknown dialog type: " + dialogType);
-                break;
+            _unityReady = await JS.InvokeAsync<bool>("unityBridge.load", new
+            {
+                containerSelector = "#unity-container",
+                canvasSelector = "#unity-canvas",
+                loadingBarSelector = "#unity-loading-bar",
+                progressSelector = "#unity-progress-bar-full",
+                warningSelector = "#unity-warning",
+                loaderUrl = "Build/wwwroot.loader.js",
+                dataUrl = "Build/wwwroot.data",
+                frameworkUrl = "Build/wwwroot.framework.js",
+                codeUrl = "Build/wwwroot.wasm",
+                streamingAssetsUrl = "StreamingAssets"
+            });
+            await JS.InvokeVoidAsync("unityBridge.connectTelemetry", Navigation.ToAbsoluteUri("api/iot/events").ToString());
         }
-    }
-
-
-
-    // Led Control Dialog 열기 - 기존 코드 활용
-    private async Task OpenLedControlDialog (Device device)
-    {
-        // MqttTopics를 문자열로 변환하여 DialogParameters에 전달하는 방법
-        var topicsAsString = string.Join(", ", device.MqttTopics.SelectMany(kvp => kvp.Value));
-
-        var parameters = new DialogParameters
+        catch (JSException exception)
         {
-            { "MqttAddress", device.MqttServer },
-            { "IpAddress", device.Address },
-            { "MqttPort", int.Parse(device.MqttPort) },
-            { "MqttTopics", topicsAsString }  // MqttTopics를 처리하여 전달
-        };
-
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
-        await DialogService.ShowAsync<LedControlComponent>("LED Control", parameters, options);
-    }
-
-    private async Task ResizeUnity (ChangeEventArgs e)
-    {
-        // Unity 창 크기 조정
-        await JSRuntime.InvokeVoidAsync("resizeUnityCanvas", width, height);
-    }
-
-    private async Task SetUnityFullscreen ()
-    {
-        await JSRuntime.InvokeVoidAsync("setUnityFullscreen");
-    }
-
-    protected override async Task OnAfterRenderAsync (bool firstRender)
-    {
-        if (firstRender)
-        {
-            // Unity 인스턴스 로드
-            await JSRuntime.InvokeVoidAsync("loadUnityInstance",
-                "#unity-container", "#unity-canvas", "#unity-loading-bar",
-                "#unity-progress-bar-full", "#unity-fullscreen-button", "#unity-warning");
+            _feedback = $"Unity 로드 실패: {exception.Message}";
+            _feedbackSuccess = false;
         }
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public Task ReceiveTelemetry(string json)
+    {
+        var message = JsonSerializer.Deserialize<TelemetryEnvelope>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (message is null) return Task.CompletedTask;
+        _lastMessage = message;
+        foreach (var pair in message.Values)
+        {
+            var key = Normalize(pair.Key);
+            _metrics[key] = pair.Value;
+            if (key == "temperature")
+            {
+                _temperature.Add(pair.Value);
+                if (_temperature.Count > 16) _temperature.RemoveAt(0);
+            }
+        }
+        _labels = Enumerable.Range(1, _temperature.Count).Select(index => index.ToString()).ToArray();
+        _series = [new ChartSeries { Name = "Temperature", Data = _temperature.ToArray() }];
+        return InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task ReceiveUnityMessage(string topic, string payload)
+    {
+        var result = await Api.PublishFromUnityAsync(new MqttPublishRequest { Topic = topic, Payload = payload, Source = "unity" });
+        _feedback = result.Message;
+        _feedbackSuccess = result.Success;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public Task ShowBlazorPanel(string panelName)
+    {
+        _activePanel = panelName;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SendCommandAsync(string topic, string payload)
+    {
+        var result = await Api.PublishAsync(new MqttPublishRequest { Topic = topic, Payload = payload, Qos = 1 });
+        _feedback = result.Message;
+        _feedbackSuccess = result.Success;
+    }
+
+    private async Task SetFullscreenAsync() => await JS.InvokeVoidAsync("unityBridge.setFullscreen");
+
+    private string Value(string key) => _metrics.TryGetValue(key, out var value) ? value.ToString("0.0") : "--";
+    private static string Normalize(string value) => value.ToLowerInvariant() switch
+    {
+        var key when key.Contains("temp") => "temperature",
+        var key when key.Contains("humid") => "humidity",
+        var key when key.Contains("soil") || key.Contains("moisture") => "soil",
+        var key => key
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_reference is null) return;
+        try { await JS.InvokeVoidAsync("unityBridge.dispose"); } catch (JSDisconnectedException) { }
+        _reference?.Dispose();
     }
 }

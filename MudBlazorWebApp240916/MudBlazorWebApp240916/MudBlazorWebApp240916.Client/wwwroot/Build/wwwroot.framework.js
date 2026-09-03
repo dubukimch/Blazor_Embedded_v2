@@ -1295,7 +1295,7 @@ function stackTrace() {
 
 function _AirControl() {
  console.log("Air Control button clicked in Unity WebGL.");
- DotNet.invokeMethodAsync("MudBlazorWebApp240916.Client", "ShowAirQualityDialog", "AirControl");
+ window.AirControl();
 }
 
 var JS_Accelerometer = null;
@@ -3319,17 +3319,17 @@ function _JS_WebRequest_SetTimeout(requestId, timeout) {
 
 function _LedControl() {
  console.log("LED Control button clicked in Unity WebGL.");
- DotNet.invokeMethodAsync("MudBlazorWebApp240916.Client", "ShowIlluminanceControlDialog", "LedControl");
+ window.LedControl();
 }
 
 function _MemoList() {
  console.log("Memo List button clicked in Unity WebGL.");
- DotNet.invokeMethodAsync("MudBlazorWebApp240916.Client", "ShowMemoListDialog", "MemoList");
+ window.MemoList();
 }
 
 function _WaterControl() {
  console.log("Water Control button clicked in Unity WebGL.");
- DotNet.invokeMethodAsync("MudBlazorWebApp240916.Client", "ShowSoilMoistureDialog", "WaterControl");
+ window.WaterControl();
 }
 
 var ExceptionInfoAttrs = {

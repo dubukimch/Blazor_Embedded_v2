@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.StaticFiles;
 using MudBlazor;
 using MudBlazor.Services;
 using MudBlazorWebApp240916.Components;
-using MudBlazorWebApp240916.Shared.Services;
-using System.Net.Http;
+using MudBlazorWebApp240916;
+using MudBlazorWebApp240916.Client.Services;
+using MudBlazorWebApp240916.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseStaticWebAssets();
 
 // Register HttpClient
 builder.Services.AddHttpClient();
@@ -14,22 +16,14 @@ builder.Services.AddHttpClient();
 builder.Services.AddMudServices();
 
 // Register DeviceDiscoveryService to DI container
-builder.Services.AddScoped<DeviceDiscoveryService>();
-// Register MqttService
-builder.Services.AddScoped<MqttService>();
-builder.Services.AddScoped<IDialogService, DialogService>();
-builder.Services.AddScoped<DialogServiceHandler>();
+builder.Services.AddSingleton<TelemetryStreamBroker>();
+builder.Services.AddSingleton<DeviceModuleRegistry>();
+builder.Services.AddSingleton<MqttGateway>();
+builder.Services.AddScoped<IoTApiClient>();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAllOrigins", builder =>
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader());
-});
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.Limits.MaxRequestBodySize = 524288000; // 50MB�� ���� ����
@@ -39,7 +33,6 @@ builder.Services.Configure<IISServerOptions>(options =>
     options.MaxRequestBodySize = 524288000; // 50MB�� ���� ����
 });
 var app = builder.Build();
-app.UseCors("AllowAllOrigins"); // CORS ���
 // FileExtensionContentTypeProvider ����
 var provider = new FileExtensionContentTypeProvider();
 provider.Mappings[".unityweb"] = "application/octet-stream";
@@ -56,14 +49,14 @@ app.UseStaticFiles(new StaticFileOptions
         // ���Ʋ�� ���Ͽ� ���� Content-Encoding ��� �߰�
         if (ctx.File.Name.EndsWith(".br"))
         {
-            ctx.Context.Response.Headers.Add("Content-Encoding", "br");
+            ctx.Context.Response.Headers.ContentEncoding = "br";
         }
         else if (ctx.File.Name.EndsWith(".gz"))
         {
-            ctx.Context.Response.Headers.Add("Content-Encoding", "gzip");
+            ctx.Context.Response.Headers.ContentEncoding = "gzip";
         }
-        // �⺻ ĳ�� ����
-        ctx.Context.Response.Headers.Add("Cache-Control", "public,max-age=31536000");
+        // Unity 파일명에는 콘텐츠 해시가 없으므로 재빌드 후 오래된 번들을 고정 캐시하면 안 된다.
+        ctx.Context.Response.Headers.CacheControl = "public,max-age=0,must-revalidate";
     }
 });
 
@@ -82,6 +75,8 @@ else
 //app.UseHttpsRedirection();
 
 app.UseAntiforgery();
+
+app.MapIoTApi();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

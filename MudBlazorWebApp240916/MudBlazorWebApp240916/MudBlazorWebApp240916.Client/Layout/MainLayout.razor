@@ -1,105 +1,68 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
+
 <MudLayout>
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3">Smart Grow</MudText>
+    <MudAppBar Elevation="0" Class="sg-appbar">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="DrawerToggle" />
+        <div class="brand-lockup">
+            <span class="brand-mark">SG</span>
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="brand-title">Smart Grow</MudText>
+                <MudText Typo="Typo.caption" Class="brand-caption">IoT DIGITAL TWIN</MudText>
+            </div>
+        </div>
         <MudSpacer />
-        <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+        <span class="top-status"><i></i> Gateway ready</span>
+        <MudIconButton Icon="@DarkLightModeButtonIcon" Color="Color.Inherit" OnClick="DarkModeToggle" />
     </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="0" Class="sg-drawer">
         <NavMenu />
+        <div class="drawer-foot"><span>EDGE CONSOLE</span><strong>v2.0</strong></div>
     </MudDrawer>
-    <MudMainContent Class="mt-16 pa-4">
-        @Body
-    </MudMainContent>
+
+    <MudMainContent Class="sg-main">@Body</MudMainContent>
 </MudLayout>
-<script src="js/unityLoaderScript.js"></script>
-<script src="js/interactions.js"></script>
 
 <div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
+    화면을 갱신하는 중 문제가 발생했습니다.
+    <a href="" class="reload">다시 불러오기</a>
+    <a class="dismiss">×</a>
 </div>
 
 @code {
     private bool _drawerOpen = true;
     private bool _isDarkMode = true;
-    private MudTheme? _theme = null;
+    private MudTheme _theme = new();
 
     protected override void OnInitialized()
     {
-        base.OnInitialized();
-
-        _theme = new()
+        _theme = new MudTheme
         {
-            PaletteLight = _lightPalette,
-            PaletteDark = _darkPalette,
-            LayoutProperties = new LayoutProperties()
+            PaletteLight = new PaletteLight
+            {
+                Primary = "#0A7C66", Secondary = "#605DEC", Tertiary = "#D97706",
+                Background = "#F4F7F6", Surface = "#FFFFFF", AppbarBackground = "rgba(255,255,255,.86)",
+                AppbarText = "#13231F", DrawerBackground = "#FFFFFF", DrawerText = "#42534E",
+                TextPrimary = "#13231F", TextSecondary = "#65756F", Success = "#0A7C66"
+            },
+            PaletteDark = new PaletteDark
+            {
+                Primary = "#62D6B8", Secondary = "#A5A3FF", Tertiary = "#F5B862",
+                Background = "#0B1210", Surface = "#121C19", AppbarBackground = "rgba(11,18,16,.88)",
+                AppbarText = "#ECF8F4", DrawerBackground = "#0E1714", DrawerText = "#B6C9C2",
+                TextPrimary = "#ECF8F4", TextSecondary = "#92A8A0", Success = "#62D6B8",
+                Info = "#70A7FF", Warning = "#F5B862", Error = "#FF7C86"
+            },
+            LayoutProperties = new LayoutProperties { DefaultBorderRadius = "14px" }
         };
     }
 
-
-    private void DrawerToggle()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
-
-    private void DarkModeToggle()
-    {
-        _isDarkMode = !_isDarkMode;
-    }
-
-    private readonly PaletteLight _lightPalette = new()
-    {
-        Black = "#110e2d",
-        AppbarText = "#424242",
-        AppbarBackground = "rgba(255,255,255,0.8)",
-        DrawerBackground = "#ffffff",
-        GrayLight = "#e8e8e8",
-        GrayLighter = "#f9f9f9",
-    };
-
-    private readonly PaletteDark _darkPalette = new()
-    {
-        Primary = "#7e6fff",
-        Surface = "#1e1e2d",
-        Background = "#1a1a27",
-        BackgroundGray = "#151521",
-        AppbarText = "#92929f",
-        AppbarBackground = "rgba(26,26,39,0.8)",
-        DrawerBackground = "#1a1a27",
-        ActionDefault = "#74718e",
-        ActionDisabled = "#9999994d",
-        ActionDisabledBackground = "#605f6d4d",
-        TextPrimary = "#b2b0bf",
-        TextSecondary = "#92929f",
-        TextDisabled = "#ffffff33",
-        DrawerIcon = "#92929f",
-        DrawerText = "#92929f",
-        GrayLight = "#2a2833",
-        GrayLighter = "#1e1e2d",
-        Info = "#4a86ff",
-        Success = "#3dcb6c",
-        Warning = "#ffb545",
-        Error = "#ff3f5f",
-        LinesDefault = "#33323e",
-        TableLines = "#33323e",
-        Divider = "#292838",
-        OverlayLight = "#1e1e2d80",
-    };
-
-    public string DarkLightModeButtonIcon => _isDarkMode switch
-    {
-        true => Icons.Material.Rounded.AutoMode,
-        false => Icons.Material.Outlined.DarkMode,
-    };
+    private void DrawerToggle() => _drawerOpen = !_drawerOpen;
+    private void DarkModeToggle() => _isDarkMode = !_isDarkMode;
+    private string DarkLightModeButtonIcon => _isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode;
 }
-
-

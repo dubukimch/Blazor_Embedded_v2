@@ -1,80 +1,88 @@
 # Blazor Embedded v2
 
-Blazor 기반 임베디드/IoT 연동 프로젝트입니다. 서버 앱은 로컬 네트워크에서 Arduino 장치를 검색하고 MQTT로 LED 제어와 센서 데이터 모니터링을 수행합니다. WebAssembly 앱은 Unity WebGL 빌드를 Blazor 화면에서 로드하는 3D 대시보드 실험 앱입니다.
+Arduino·Raspberry Pi의 MQTT 데이터를 Blazor 실시간 차트와 Unity WebGL 디지털 트윈에 동시에 전달하는 .NET 8 기반 IoT 콘솔입니다.
 
-## 프로젝트 구성
+## 권장 실행 프로젝트
 
-| 경로 | 유형 | 설명 |
-| --- | --- | --- |
-| `BlazorApp_arduinoSearch_240824_01` | Blazor Server | 장치 검색, MQTT 연결, LED 제어, 센서 차트 |
-| `BlazorApp3/BlazorApp3` | Blazor WebAssembly/PWA | Unity WebGL 3D 대시보드 |
-| `tests/BlazorApp_arduinoSearch_240824_01.Tests` | xUnit, net10.0 | 장치 검색 설정/후보 IP 로직 테스트 |
-| `설계` | 문서 | 프로젝트 분석과 구조 설계 |
-| `개발` | 문서 | 개선 작업 목록과 업그레이드 계획 |
-| `작업진행현황` | 문서 | 날짜별 작업 로그 |
-
-## 요구 사항
-
-- .NET SDK 10.0.x 또는 호환 SDK
-- 현재 앱 대상 프레임워크: `net10.0`
-- 테스트 프로젝트 대상 프레임워크: `net10.0`
-- MQTT 브로커
-- `/device_info`, `/configure_mqtt` 엔드포인트를 제공하는 Arduino 장치
-
-## 서버 앱 실행
+통합 앱은 `MudBlazorWebApp240916/MudBlazorWebApp240916.sln`입니다. 나머지 솔루션은 이전 실험과 기능 검증용으로 보존합니다.
 
 ```powershell
-dotnet restore BlazorApp_arduinoSearch_240824_01\BlazorApp_arduinoSearch_240824_01.sln
-dotnet build BlazorApp_arduinoSearch_240824_01\BlazorApp_arduinoSearch_240824_01.sln
-dotnet run --project BlazorApp_arduinoSearch_240824_01\BlazorApp_arduinoSearch_240824_01.csproj
+dotnet restore MudBlazorWebApp240916\MudBlazorWebApp240916.sln
+dotnet build MudBlazorWebApp240916\MudBlazorWebApp240916.sln -c Release
+dotnet run --project MudBlazorWebApp240916\MudBlazorWebApp240916\MudBlazorWebApp240916\MudBlazorWebApp240916.csproj
 ```
 
-기본 실행 주소는 `http://0.0.0.0:5000`입니다.
+실행 후 다음 화면을 사용합니다.
 
-## WASM 앱 실행
+| 경로 | 역할 |
+| --- | --- |
+| `/` | 통합 개요 및 시스템 흐름 |
+| `/Dashboard` | MQTT 연결·발행, SSE 수신, Blazor 실시간 차트 |
+| `/Devices` | Arduino/Raspberry Pi/ESP32 MQTT 모듈 프로필 관리 |
+| `/VirtualFarm` | Unity WebGL, Blazor 차트, 양방향 JS 브리지 |
 
-```powershell
-dotnet restore BlazorApp3\BlazorApp3.sln
-dotnet build BlazorApp3\BlazorApp3.sln
-dotnet run --project BlazorApp3\BlazorApp3\BlazorApp3.csproj
+## 데이터 흐름
+
+```text
+Arduino / Raspberry Pi
+        │ MQTT publish / subscribe
+        ▼
+ASP.NET Core MqttGateway
+        │ normalized TelemetryEnvelope
+        ├── SSE ──▶ Blazor dashboard chart
+        └── SSE ──▶ unityBridge.js ──▶ Unity BlazorBridge.OnTelemetry
+
+Unity .jslib ──▶ unityBridge.publishFromUnity ──▶ /api/iot/unity ──▶ MQTT + Blazor
 ```
 
-## 장치 검색 설정
+브라우저에서는 TCP MQTT나 ICMP Ping을 직접 실행하지 않습니다. 브로커 연결과 장비 네트워크 통신은 서버가 담당하며 브라우저에는 HTTP/SSE만 노출합니다.
 
-서버 앱의 장치 검색 설정은 `BlazorApp_arduinoSearch_240824_01/appsettings.json`의 `DeviceDiscovery` 섹션에서 관리합니다.
+## MQTT payload
+
+숫자 하나 또는 평면 JSON 객체를 지원합니다.
+
+```text
+23.8
+```
 
 ```json
 {
-  "DeviceDiscovery": {
-    "BaseIpAddress": "172.30.1.",
-    "StartHost": 1,
-    "EndHost": 253,
-    "PingTimeoutMilliseconds": 1000,
-    "HttpTimeoutMilliseconds": 2000,
-    "MaxConcurrency": 32,
-    "ExcludedAddresses": [
-      "172.30.1.254"
-    ]
-  }
+  "temperature": 23.8,
+  "humidity": 61,
+  "soil": 72
 }
 ```
 
-Arduino 장치는 다음 API를 제공해야 합니다.
+숫자 payload의 지표 이름은 토픽 마지막 segment에서 추출합니다. 예: `farm/a/temperature` → `temperature`.
 
-| 엔드포인트 | 방식 | 설명 |
-| --- | --- | --- |
-| `/device_info` | GET | 장치 이름, 설명 등 장치 정보 반환 |
-| `/configure_mqtt` | POST | MQTT 서버, 포트, 토픽 설정 수신 |
+## Unity 연동
 
-## 검증
+Unity 장면에 이름이 `BlazorBridge`인 GameObject를 두고 아래 메서드를 구현합니다.
 
-```powershell
-dotnet test BlazorApp_arduinoSearch_240824_01\BlazorApp_arduinoSearch_240824_01.sln
-dotnet build BlazorApp3\BlazorApp3.sln
+```csharp
+public void OnTelemetry(string json)
+{
+    // topic, payload, source, receivedAt, values를 역직렬화해 장면에 반영
+}
 ```
 
-CI 설정은 `.github/workflows/dotnet-build.yml`에 있습니다.
+Unity에서 Blazor/MQTT로 보내려면 WebGL `.jslib`에서 호출합니다.
 
-## 문서 기록 규칙
+```javascript
+mergeInto(LibraryManager.library, {
+  PublishTelemetry: function (topicPtr, payloadPtr) {
+    return window.unityBridge.publishFromUnity(
+      UTF8ToString(topicPtr),
+      UTF8ToString(payloadPtr));
+  }
+});
+```
 
-개발 또는 개선 작업을 진행할 때마다 `작업진행현황` 폴더에 날짜별 Markdown 로그를 남깁니다.
+자세한 계약과 운영 기준은 [기술 명세](설계/01_기술명세서.md), [화면 설계](설계/02_와이어프레임.md), [구현 명세](구현/01_구현구조_동작명세.md)를 참고합니다.
+
+## 운영 주의사항
+
+- `/api/iot/*`는 로컬·신뢰 네트워크 운영을 전제로 합니다. 외부 공개 시 인증/권한, TLS 종료, MQTT 자격 증명 비밀 저장을 먼저 추가해야 합니다.
+- 모듈 프로필은 서버의 `App_Data/device-modules.json`에 저장됩니다. 비밀번호는 이 파일에 저장하지 않습니다.
+- 포함된 Unity 빌드는 약 90MB이므로 첫 로드가 느릴 수 있습니다. 파일명에 콘텐츠 해시가 없어 `/Build` 자산도 ETag 재검증 캐시를 사용합니다.
+- 실제 하드웨어 검증에는 별도의 MQTT 브로커와 장비가 필요합니다. 브로커가 없어도 Dashboard의 `샘플 데이터`로 Blazor/SSE 파이프라인을 검사할 수 있습니다.

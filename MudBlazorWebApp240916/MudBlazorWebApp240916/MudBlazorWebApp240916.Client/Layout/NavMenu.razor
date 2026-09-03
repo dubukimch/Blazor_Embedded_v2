@@ -1,9 +1,10 @@
-﻿
-<MudNavMenu>
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-    <MudNavLink Href="Devices" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ConnectWithoutContact">Devices</MudNavLink>
-    <MudNavLink Href="DashBoard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ShowChart">DashBoard</MudNavLink>
-    <MudNavLink Href="VirtualFarm" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Games">Virtual Farm</MudNavLink>
+<div class="nav-context"><span>WORKSPACE</span><strong>Greenhouse 01</strong></div>
+
+<MudNavMenu Class="sg-nav">
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Overview</MudNavLink>
+    <MudNavLink Href="Dashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ShowChart">Live telemetry</MudNavLink>
+    <MudNavLink Href="Devices" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.DeveloperBoard">Device modules</MudNavLink>
+    <MudNavLink Href="VirtualFarm" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ViewInAr">Unity twin</MudNavLink>
 </MudNavMenu>
 
-
+<div class="nav-hint"><span class="nav-hint-icon">↗</span><div><strong>MQTT → Blazor → Unity</strong><small>하나의 실시간 데이터 흐름</small></div></div>

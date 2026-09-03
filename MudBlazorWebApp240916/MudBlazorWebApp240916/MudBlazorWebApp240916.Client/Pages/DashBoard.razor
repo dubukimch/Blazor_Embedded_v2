@@ -1,280 +1,234 @@
-﻿@page "/Dashboard"
-@using MudBlazor
-@using MudBlazorWebApp240916.Shared.DataModel
-@inject IDialogService DialogService
-@using MudBlazorWebApp240916.Client.Pages
+@page "/Dashboard"
+@implements IAsyncDisposable
+@using System.Text.Json
+@using Microsoft.JSInterop
 @using MudBlazor.Components.Chart.Models
+@using MudBlazorWebApp240916.Client.Services
+@using MudBlazorWebApp240916.Shared.DataModel
+@inject IoTApiClient Api
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
 
-<MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
-    <MudGrid>
-        <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <MudText Typo="Typo.h6">Illuminance</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.Lightbulb" Color="Color.Tertiary" OnClick="() => OpenIlluminanceControlDialog()" />
+<PageTitle>Smart Grow · Live telemetry</PageTitle>
+
+<main class="page-shell telemetry-page">
+    <header class="page-heading">
+        <div><span class="eyebrow">LIVE OPERATIONS</span><h1>Telemetry console</h1><p>MQTT 수신값을 정규화해 Blazor와 Unity에 같은 이벤트로 전달합니다.</p></div>
+        <div class="status-pill @(_status.IsConnected ? "online" : "offline")"><i></i>@(_status.IsConnected ? $"{_status.Host}:{_status.Port}" : "Broker offline")</div>
+    </header>
+
+    <section class="telemetry-layout">
+        <aside class="control-stack">
+            <article class="panel-card">
+                <div class="panel-heading"><span>01</span><div><h2>MQTT broker</h2><p>서버 게이트웨이 연결</p></div></div>
+                <div class="field-stack">
+                    <MudTextField T="string" Label="Broker host" Variant="Variant.Outlined" Immediate="true" @bind-Value="_host" />
+                    <MudNumericField T="int" Label="Port" Variant="Variant.Outlined" @bind-Value="_port" Min="1" Max="65535" />
+                    <MudTextField T="string" Label="Subscribe topics" HelperText="쉼표로 여러 토픽 입력" Variant="Variant.Outlined" Immediate="true" @bind-Value="_topics" />
                 </div>
-                <MudChart ChartType="ChartType.Line" ChartSeries="@IlluminanceSeries" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <MudText Typo="Typo.h6">Temperature and Humidity</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.Thermostat" Color="Color.Secondary" OnClick="() => OpenTemperatureAndHumidityDialog()" />
+                <div class="button-row">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Power" Disabled="_busy" OnClick="ConnectAsync">연결</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Filled.PowerOff" Disabled="_busy || !_status.IsConnected" OnClick="DisconnectAsync">해제</MudButton>
                 </div>
-                <MudChart ChartType="ChartType.Line" ChartSeries="@TemperatureAndHumiditySeries" XAxisLabels="@XAxisLabels" Width="100%" Height="350px" />
-            </MudPaper>
-        </MudItem>
+            </article>
 
-        <MudItem xs="12" sm="12" md="4">
-            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <MudText Typo="Typo.h6">Soil Moisture</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.WaterDrop" Color="Color.Info" OnClick="() => OpenSoilMoistureDialog()" />
-                    <style>
-                        .custom-hover-button:hover {
-                            background-color: green;
-                            border-color: green;
-                            color: white;
-                        }
-                    </style>
+            <article class="panel-card">
+                <div class="panel-heading"><span>02</span><div><h2>Command</h2><p>Arduino / Pi로 발행</p></div></div>
+                <div class="field-stack">
+                    <MudTextField T="string" Label="Publish topic" Variant="Variant.Outlined" Immediate="true" @bind-Value="_publishTopic" />
+                    <MudTextField T="string" Label="Payload" Variant="Variant.Outlined" Lines="3" Immediate="true" @bind-Value="_publishPayload" />
                 </div>
-                <!-- Soil Moisture Time Series 차트 -->
-                <MudTimeSeriesChart ChartSeries="@SoilMoistureSeries" @bind-SelectedIndex="SelectedSoilMoistureIndex" Width="100%" Height="350px" ChartOptions="@SoilMoistureOptions" CanHideSeries TimeLabelSpacing="TimeSpan.FromMinutes(5)" />
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" sm="6">
-            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 450px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <MudText Typo="Typo.h6">CO2 Levels</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.WindPower" Color="Color.Primary" OnClick="() => OpenAirQualityDialog()" />
+                <div class="button-row">
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Send" Disabled="_busy || !_status.IsConnected" OnClick="PublishAsync">발행</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Inherit" OnClick="SendSampleAsync">샘플 데이터</MudButton>
                 </div>
+            </article>
+        </aside>
 
-                <!-- CO2 Pie 차트 -->
-                <MudChart ChartType="ChartType.Pie"
-                          InputData="@CO2PieData"
-                          InputLabels="@CO2Labels"
-                          Width="100%" Height="350px" />
-            </MudPaper>
-        </MudItem>
+        <section class="dashboard-stage">
+            <div class="kpi-grid">
+                <article><span>TEMPERATURE</span><strong>@Metric("temperature", "--")<small> °C</small></strong><i class="trend mint">LIVE</i></article>
+                <article><span>HUMIDITY</span><strong>@Metric("humidity", "--")<small> %</small></strong><i class="trend violet">LIVE</i></article>
+                <article><span>SOIL MOISTURE</span><strong>@Metric("soil", "--")<small> %</small></strong><i class="trend amber">LIVE</i></article>
+                <article><span>MESSAGES</span><strong>@_status.ReceivedMessages<small> total</small></strong><i class="trend neutral">MQTT</i></article>
+            </div>
 
-        <MudItem xs="12" sm="6">
-            <MudPaper Elevation="2" Class="pa-4" Style="min-height: 490px;">
-                <MudText Typo="Typo.h6">Farm Status Overview</MudText>
+            <article class="chart-card">
+                <div class="chart-heading"><div><span>REALTIME STREAM</span><h2>Environmental telemetry</h2></div><div class="stream-state"><i></i>@_streamState</div></div>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@_chartSeries" XAxisLabels="@_labels" Width="100%" Height="360px" />
+            </article>
 
-                @if (Notes.Count == 0)
+            <article class="event-card">
+                <div class="chart-heading"><div><span>EVENT INSPECTOR</span><h2>Latest payload</h2></div><small>@(_lastMessage?.ReceivedAt.ToLocalTime().ToString("HH:mm:ss") ?? "waiting")</small></div>
+                @if (_lastMessage is null)
                 {
-                    <MudText Typo="Typo.body1">
-                        All systems functioning normally. No issues detected.
-                    </MudText>
+                    <div class="empty-state"><b>⌁</b><span>MQTT 메시지를 기다리는 중입니다.</span><small>브로커 없이도 ‘샘플 데이터’로 전체 흐름을 확인할 수 있습니다.</small></div>
                 }
                 else
                 {
-                    <MudList T="Note">
-                        @foreach (var note in Notes)
-                        {
-                            <MudListItem OnClick="() => OpenViewEditNoteDialog(note)">
-                                <MudText Typo="Typo.body1">@note.Title (@note.Date.ToString("d"))</MudText>
-                            </MudListItem>
-                        }
-                    </MudList>
+                    <div class="event-line"><span>@_lastMessage.Source</span><code>@_lastMessage.Topic</code><pre>@_lastMessage.Payload</pre></div>
                 }
+            </article>
+        </section>
+    </section>
 
-                <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="OpenNoteDialog" />
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
-</MudContainer>
+    @if (!string.IsNullOrWhiteSpace(_feedback))
+    {
+        <div class="toast-inline @(_feedbackSuccess ? "success" : "error")">@_feedback</div>
+    }
+</main>
 
 @code {
-    public string[] XAxisLabels = { "1 PM", "2 PM", "3 PM", "4 PM", "5 PM" };
+    private const string StreamKey = "dashboard";
+    private DotNetObjectReference<DashBoard>? _reference;
+    private MqttGatewayStatus _status = new();
+    private TelemetryEnvelope? _lastMessage;
+    private readonly Dictionary<string, double> _metrics = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<double> _temperature = [];
+    private readonly List<double> _humidity = [];
+    private readonly List<double> _soil = [];
+    private List<ChartSeries> _chartSeries = [];
+    private string[] _labels = [];
+    private string _host = "localhost";
+    private int _port = 1883;
+    private string _topics = "farm/+/telemetry, sensors/#";
+    private string _publishTopic = "farm/device/command";
+    private string _publishPayload = "{\"action\":\"led\",\"value\":true}";
+    private string _streamState = "connecting";
+    private string? _feedback;
+    private bool _feedbackSuccess;
+    private bool _busy;
 
-    // 조도 센서 시리즈 (Illuminance)
-    public List<ChartSeries> IlluminanceSeries { get; set; } = new List<ChartSeries>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        new ChartSeries
-        {
-            Name = "Illuminance1 (lux)",
-            Data = new double[] { 1000, 1200, 1100, 1300, 1250 }
-        },
-        new ChartSeries
-        {
-            Name = "Illuminance2 (lux)",
-            Data = new double[] { 1050, 1150, 1180, 1290, 1300 }
-        },
-        new ChartSeries
-        {
-            Name = "Illuminance3 (lux)",
-            Data = new double[] { 950, 1100, 1150, 1250, 1280 }
-        },
-        new ChartSeries
-        {
-            Name = "Illuminance4 (lux)",
-            Data = new double[] { 1020, 1180, 1110, 1340, 1320 }
-        }
-    };
-
-    // 온도 및 습도 시리즈 (Temperature and Humidity)
-    public List<ChartSeries> TemperatureAndHumiditySeries { get; set; } = new List<ChartSeries>
-    {
-        new ChartSeries
-        {
-            Name = "Temperature (°C)",
-            Data = new double[] { 24, 25, 23, 26, 24 }
-        },
-        new ChartSeries
-        {
-            Name = "Humidity (%)",
-            Data = new double[] { 45, 50, 47, 49, 52 }
-        }
-    };
-
-    // Soil Moisture Time Series 데이터
-    public List<MudBlazor.Components.Chart.Models.TimeSeriesChartSeries> SoilMoistureSeries { get; set; } = new List<MudBlazor.Components.Chart.Models.TimeSeriesChartSeries>();
-    private int SelectedSoilMoistureIndex = -1;
-
-    public ChartOptions SoilMoistureOptions { get; set; } = new ChartOptions
-        {
-            YAxisLines = true,
-            YAxisTicks = 500,
-            MaxNumYAxisTicks = 10,
-            YAxisRequireZeroPoint = true,
-            XAxisLines = true,
-            LineStrokeWidth = 2,
-        };
-
-    protected override void OnInitialized ()
-    {
-        var now = DateTime.Now;
-
-        // 분 단위로 X축 데이터 생성
-        var chart1 = new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries
-            {
-                Index = 0,
-                Name = "Soil Moisture Sensor 1",
-                Data = Enumerable.Range(-90, 60).Select(x => new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries.TimeValue(now.AddSeconds(x * 30), new Random().Next(6000, 15000))).ToList(),
-                IsVisible = true,
-                Type = MudBlazor.Components.Chart.Models.TimeSeriesDiplayType.Line
-            };
-
-        var chart2 = new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries
-            {
-                Index = 1,
-                Name = "Soil Moisture Sensor 2",
-                Data = Enumerable.Range(-90, 60).Select(x => new MudBlazor.Components.Chart.Models.TimeSeriesChartSeries.TimeValue(now.AddSeconds(x * 30), new Random().Next(4000, 10000))).ToList(),
-                IsVisible = true,
-                Type = MudBlazor.Components.Chart.Models.TimeSeriesDiplayType.Line
-            };
-
-        SoilMoistureSeries.Add(chart1);
-        SoilMoistureSeries.Add(chart2);
-
+        if (!firstRender) return;
+        _reference = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("iotRealtime.connect", StreamKey,
+            Navigation.ToAbsoluteUri("api/iot/events").ToString(), _reference, nameof(ReceiveTelemetry));
+        await RefreshStatusAsync();
+        BuildChart();
         StateHasChanged();
     }
 
-    // CO2 Pie 차트 레이블 및 데이터
-    public string[] CO2Labels = { "CO2 1", "CO2 2","CO2 3", "CO2 4","CO2 5", "CO2 6", "ETC" }; // Pie 차트 레이블
-
-    public double[] CO2PieData = { 400, 320, 210, 300, 220, 510, 55 }; // Pie 차트 데이터
-
-    private List<Note> Notes { get; set; } = new List<Note>();
-
-    private async Task OpenNoteDialog ()
+    private async Task ConnectAsync()
     {
-        var parameters = new DialogParameters();
-        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-
-        var dialog = DialogService.Show<AddNoteDialog>("Add a new Note", parameters, options);
-        var result = await dialog.Result;
-
-        if (result != null && !result.Canceled && result.Data is Note note)
+        _busy = true;
+        var result = await Api.ConnectAsync(new MqttConnectionRequest
         {
-            Notes.Add(note); // 메모 추가
-        }
+            Host = _host,
+            Port = _port,
+            Topics = _topics.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+        });
+        SetFeedback(result);
+        await RefreshStatusAsync();
+        _busy = false;
     }
-    private async Task OpenViewEditNoteDialog (Note note)
+
+    private async Task DisconnectAsync()
     {
-        var parameters = new DialogParameters { ["CurrentNote"] = note };
-        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        _busy = true;
+        var result = await Api.DisconnectAsync();
+        SetFeedback(result);
+        await RefreshStatusAsync();
+        _busy = false;
+    }
 
-        var dialog = DialogService.Show<ViewEditNoteDialog>("View/Edit Note", parameters, options);
-        var result = await dialog.Result;
+    private async Task PublishAsync()
+    {
+        _busy = true;
+        SetFeedback(await Api.PublishAsync(new MqttPublishRequest { Topic = _publishTopic, Payload = _publishPayload, Qos = 1 }));
+        _busy = false;
+    }
 
-        if (result != null && !result.Canceled && result.Data is Note updatedNote)
+    private async Task SendSampleAsync()
+    {
+        var tick = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var payload = JsonSerializer.Serialize(new
         {
-            // 노트 수정
-            var noteToUpdate = Notes.FirstOrDefault(n => n == note);
-            if (noteToUpdate != null)
-            {
-                noteToUpdate.Title = updatedNote.Title;
-                noteToUpdate.Content = updatedNote.Content;
-                noteToUpdate.Date = updatedNote.Date;
-            }
-        }
-    }
-    private async Task OpenSoilMoistureDialog ()
-    {
-        var parameters = new DialogParameters();
-        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
-
-        var dialog = DialogService.Show<SoilMoistureComponent>("Soil Moisture Control", parameters, options);
-        var result = await dialog.Result;
-
-        if (result != null && !result.Canceled)
+            temperature = 21 + tick % 8,
+            humidity = 52 + tick % 13,
+            soil = 61 + tick % 9
+        });
+        SetFeedback(await Api.PublishFromUnityAsync(new MqttPublishRequest
         {
-            Console.WriteLine("Soil Moisture Dialog Closed");
-        }
+            Topic = "demo/greenhouse/telemetry", Payload = payload, Source = "simulator"
+        }));
     }
-    private async Task OpenAirQualityDialog ()
+
+    [JSInvokable]
+    public async Task ReceiveTelemetry(string json)
     {
-        var parameters = new DialogParameters();
-        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
-
-        var dialog = DialogService.Show<AirQualityComponent>("Air Quality Control", parameters, options);
-        var result = await dialog.Result;
-
-        if (result != null && !result.Canceled)
-        {
-            Console.WriteLine("Air Quality Dialog Closed");
-        }
+        var message = JsonSerializer.Deserialize<TelemetryEnvelope>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (message is null) return;
+        _lastMessage = message;
+        foreach (var pair in message.Values) _metrics[NormalizeMetric(pair.Key)] = pair.Value;
+        Append(_temperature, FindValue(message, "temperature", "temp"));
+        Append(_humidity, FindValue(message, "humidity", "humid"));
+        Append(_soil, FindValue(message, "soil", "moisture"));
+        BuildChart();
+        await RefreshStatusAsync();
+        await InvokeAsync(StateHasChanged);
     }
-    private async Task OpenTemperatureAndHumidityDialog ()
+
+    [JSInvokable]
+    public Task OnStreamStateChanged(string state)
     {
-        var parameters = new DialogParameters
+        _streamState = state;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshStatusAsync()
     {
-        { "TemperatureAndHumiditySeries", TemperatureAndHumiditySeries },
-        { "XAxisLabels", XAxisLabels }
+        try { _status = await Api.GetStatusAsync(); }
+        catch (HttpRequestException exception) { _feedback = exception.Message; _feedbackSuccess = false; }
+    }
+
+    private void BuildChart()
+    {
+        var count = new[] { _temperature.Count, _humidity.Count, _soil.Count }.Max();
+        _labels = Enumerable.Range(1, count).Select(index => index.ToString()).ToArray();
+        _chartSeries =
+        [
+            new ChartSeries { Name = "Temperature", Data = Pad(_temperature, count) },
+            new ChartSeries { Name = "Humidity", Data = Pad(_humidity, count) },
+            new ChartSeries { Name = "Soil", Data = Pad(_soil, count) }
+        ];
+    }
+
+    private static double[] Pad(List<double> values, int count) =>
+        Enumerable.Repeat(double.NaN, Math.Max(0, count - values.Count)).Concat(values).ToArray();
+
+    private static void Append(List<double> values, double? value)
+    {
+        if (!value.HasValue) return;
+        values.Add(value.Value);
+        if (values.Count > 24) values.RemoveAt(0);
+    }
+
+    private static double? FindValue(TelemetryEnvelope message, params string[] names)
+    {
+        foreach (var pair in message.Values)
+            if (names.Any(name => NormalizeMetric(pair.Key).Contains(name, StringComparison.OrdinalIgnoreCase))) return pair.Value;
+        return null;
+    }
+
+    private string Metric(string name, string fallback) =>
+        _metrics.TryGetValue(name, out var value) ? value.ToString("0.0") : fallback;
+
+    private static string NormalizeMetric(string value) => value.Replace("_", "").Replace("-", "").ToLowerInvariant() switch
+    {
+        var key when key.Contains("temperature") || key == "temp" => "temperature",
+        var key when key.Contains("humidity") || key == "humid" => "humidity",
+        var key when key.Contains("soil") || key.Contains("moisture") => "soil",
+        var key => key
     };
 
-        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+    private void SetFeedback(ApiResult result) { _feedback = result.Message; _feedbackSuccess = result.Success; }
 
-        var dialog = DialogService.Show<TemperatureAndHumidityComponent>("Temperature And Humidity Control", parameters, options);
-        var result = await dialog.Result;
-
-        if (result != null && !result.Canceled)
-        {
-            Console.WriteLine("Temperature And Humidity Dialog Closed");
-        }
-    }
-    private async Task OpenIlluminanceControlDialog ()
+    public async ValueTask DisposeAsync()
     {
-        var parameters = new DialogParameters
-    {
-        { "IlluminanceSeries", IlluminanceSeries },
-        { "XAxisLabels", XAxisLabels }
-    };
-
-        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
-
-        var dialog = DialogService.Show<IlluminanceControlComponent>("Illuminance Control", parameters, options);
-        var result = await dialog.Result;
-
-        if (result != null && !result.Canceled)
-        {
-            Console.WriteLine("Illuminance Control Dialog Closed");
-        }
+        if (_reference is null) return;
+        try { await JS.InvokeVoidAsync("iotRealtime.disconnect", StreamKey); } catch (JSDisconnectedException) { }
+        _reference?.Dispose();
     }
-
 }
